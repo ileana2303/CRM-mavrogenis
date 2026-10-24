@@ -1,0 +1,96 @@
+import Link from "next/link";
+import { Card, Empty, PageTitle } from "@/components/ui";
+import { el } from "@/lib/i18n/el";
+import { fmtDate } from "@/lib/format";
+import { requireUser } from "@/server/auth/current-user";
+import type { DailyReportItem } from "@/server/domain/types";
+import { listSalespeople } from "@/server/services/auth-service";
+import { dailyReport, defaultRange } from "@/server/services/dashboard-service";
+
+export const metadata = { title: el.daily.title };
+
+type SP = { from?: string; to?: string; user?: string };
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<SP> }) {
+  const session = await requireUser();
+  const sp = await searchParams;
+  const def = defaultRange();
+  const range = { from: sp.from || def.from, to: sp.to || def.to };
+  const salespeople = session.role === "MANAGER" ? await listSalespeople() : [];
+  const userId = session.role === "MANAGER" ? sp.user || salespeople[0]?.id || session.userId : session.userId;
+  const report = await dailyReport(userId, range);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PageTitle>{el.daily.title}</PageTitle>
+
+      <form className="card p-4 grid grid-cols-2 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end" method="get">
+        <p className="col-span-2 md:col-span-4 text-sm font-semibold text-[var(--muted)]">{el.daily.dateRange}</p>
+        <label className="block">
+          <span className="label">{el.daily.from}</span>
+          <input type="date" name="from" defaultValue={range.from} className="input" />
+        </label>
+        <label className="block">
+          <span className="label">{el.daily.to}</span>
+          <input type="date" name="to" defaultValue={range.to} className="input" />
+        </label>
+        {session.role === "MANAGER" ? (
+          <label className="block col-span-2 md:col-span-1">
+            <span className="label">{el.daily.salespersonFilter}</span>
+            <select name="user" defaultValue={userId} className="input">
+              {salespeople.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div className="hidden md:block" />
+        )}
+        <button className="btn-primary col-span-2 md:col-span-1">{el.daily.apply}</button>
+      </form>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Section title={el.daily.appointments} items={report.appointments} tone="blue" />
+        <Section title={el.daily.offerFollowUps} items={report.offerFollowUps} tone="teal" />
+        <Section title={el.daily.overdue} items={report.overdue} tone="red" />
+        <Section title={el.daily.pendingOffers} items={report.pendingOffers} tone="amber" />
+      </div>
+    </div>
+  );
+}
+
+const toneDot: Record<string, string> = { blue: "bg-brand-500", teal: "bg-accent-500", red: "bg-danger-500", amber: "bg-warn-500" };
+
+function Section({ title, items, tone }: { title: string; items: DailyReportItem[]; tone: string }) {
+  return (
+    <Card
+      title={
+        <span className="flex items-center gap-2">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${toneDot[tone]}`} />
+          {title}
+          <span className="ml-auto badge bg-gray-100 text-gray-700">{items.length}</span>
+        </span>
+      }
+    >
+      {items.length === 0 ? (
+        <Empty>{el.daily.empty}</Empty>
+      ) : (
+        <ul className="divide-y divide-[var(--line)] -mx-1">
+          {items.map((it, i) => (
+            <li key={i}>
+              <Link href={it.href} className="flex items-start gap-3 px-1 py-2.5 hover:bg-brand-50 rounded-lg">
+                <span className="text-xs font-semibold tabular-nums text-[var(--muted)] mt-0.5 w-20 shrink-0">{fmtDate(it.date)}</span>
+                <span className="min-w-0">
+                  <span className="block font-medium truncate">{it.doctorName}</span>
+                  <span className="block text-sm text-[var(--muted)] truncate">{it.title}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
