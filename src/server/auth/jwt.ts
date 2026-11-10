@@ -10,8 +10,11 @@ export interface Session {
   username: string;
   fullName: string;
   role: Role;
-  /** SoftOne clientID once the SoftOne provider is active */
+  /** SoftOne clientID (per-user login) when the data provider is softone/hybrid */
   s1ClientId?: string;
+  /** SoftOne PRSN / SALESMAN ids when known */
+  s1Prsn?: string;
+  s1Salesman?: string;
 }
 
 function secret() {
@@ -33,12 +36,15 @@ export async function verifySession(token: string | undefined): Promise<Session 
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
+    const str = (k: string) => (payload[k] !== undefined && payload[k] !== null ? String(payload[k]) : undefined);
     return {
-      userId: String(payload.userId ?? payload.sub),
-      username: String(payload.username),
-      fullName: String(payload.fullName),
+      userId: str("userId") ?? String(payload.sub),
+      username: str("username") ?? "",
+      fullName: str("fullName") ?? "",
       role: payload.role as Role,
-      s1ClientId: payload.s1ClientId ? String(payload.s1ClientId) : undefined,
+      s1ClientId: str("s1ClientId"),
+      s1Prsn: str("s1Prsn"),
+      s1Salesman: str("s1Salesman"),
     };
   } catch {
     return null;

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { BackLink, DoctorLine, Field, PageTitle, entries } from "@/components/ui";
+import { BackLink, DoctorLine, Field, PageTitle, optionsFrom } from "@/components/ui";
 import { LinesEditor } from "@/components/lines-editor";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listProducts } from "@/server/services/project-service";
-import { createProjectAction } from "../actions";
+import { createProjectAction, createProjectRequestOfferAction } from "../actions";
 
 export const metadata = { title: el.projects.newTitle };
 
@@ -23,13 +24,7 @@ export default async function NewProjectPage({ params }: { params: Promise<{ id:
 
       <div className="card p-4 grid gap-4 sm:grid-cols-2">
         <Field label={el.projects.description} required>
-          <select name="type" className="input" defaultValue="REPLACEMENT">
-            {entries(el.enums.projectType).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
+          <Select name="type" defaultValue="REPLACEMENT" options={optionsFrom(el.enums.projectType)} />
         </Field>
         <Field label={el.projects.titleLabel}>
           <input name="title" className="input" placeholder={el.projects.titlePlaceholder} />
@@ -46,10 +41,10 @@ export default async function NewProjectPage({ params }: { params: Promise<{ id:
       </Field>
 
       <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-        <button name="intent" value="save" className="btn-secondary">
+        <button className="btn-secondary">
           {el.projects.saveDraft}
         </button>
-        <button name="intent" value="requestOffer" className="btn-primary">
+        <button formAction={createProjectRequestOfferAction} className="btn-primary">
           {el.projects.requestOffer}
         </button>
       </div>

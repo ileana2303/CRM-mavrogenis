@@ -1,15 +1,22 @@
 import Link from "next/link";
-import { BackLink, Card, Empty, PageTitle } from "@/components/ui";
+import { BackLink, Card, Empty, Notice, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { doctorFullName, searchDoctors } from "@/server/services/customer-service";
 
 export const metadata = { title: el.customer.results };
 
-type SP = { firstName?: string; lastName?: string; afm?: string; mobile?: string };
+type SP = { q?: string; firstName?: string; lastName?: string; afm?: string; mobile?: string };
 
 export default async function ResultsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const q = await searchParams;
-  const results = await searchDoctors(q);
+  let results: Awaited<ReturnType<typeof searchDoctors>> = [];
+  let error: string | null = null;
+  try {
+    results = await searchDoctors(q);
+  } catch (e) {
+    // SoftOne (or the local store) failed: show the message instead of the blank Next error screen
+    error = e instanceof Error ? e.message : String(e);
+  }
   const qs = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString();
 
   return (
@@ -24,6 +31,13 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       >
         {el.customer.results}
       </PageTitle>
+
+      {error && (
+        <Notice tone="red">
+          <span className="font-semibold">{el.app.error}</span>
+          <pre className="mt-1 whitespace-pre-wrap text-xs font-mono">{error}</pre>
+        </Notice>
+      )}
 
       {results.length === 0 ? (
         <Card>

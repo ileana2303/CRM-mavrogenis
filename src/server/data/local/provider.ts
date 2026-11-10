@@ -1,10 +1,12 @@
 import type {
+  Autopsy,
   CheckIn,
   Consent,
   Doctor,
   DoctorYearStat,
   Equipment,
   FollowUp,
+  Hospital,
   Offer,
   Product,
   Project,
@@ -85,9 +87,12 @@ export const localProvider: DataProvider = {
     async search(q) {
       const rows = await all<Doctor>("doctors");
       const f = norm(q.firstName), l = norm(q.lastName), a = norm(q.afm), m = norm(q.mobile).replace(/\s+/g, "");
-      if (!f && !l && !a && !m) return [];
+      const tokens = norm(q.q).split(/\s+/).filter(Boolean);
+      if (!f && !l && !a && !m && tokens.length === 0) return [];
+      const hay = (d: Doctor) => norm([d.lastName, d.firstName, d.afm, d.mobile, d.email, d.city, d.clinicAddress].join(" "));
       return rows
         .filter((d) => {
+          if (tokens.length && !tokens.every((t) => hay(d).includes(t))) return false;
           if (f && !norm(d.firstName).includes(f)) return false;
           if (l && !norm(d.lastName).includes(l)) return false;
           if (a && !d.afm.includes(a)) return false;
@@ -126,6 +131,13 @@ export const localProvider: DataProvider = {
       await mutateCollection<Equipment>("equipment", (existing) => existing.filter((e) => e.doctorId !== doctorId).concat(full));
       return full;
     },
+  },
+
+  autopsies: {
+    async listByDoctor(doctorId) {
+      return (await all<Autopsy>("autopsies")).filter((a) => a.doctorId === doctorId).sort(byDateDesc((a) => a.date + a.createdAt));
+    },
+    create: (a) => insert<Autopsy>("autopsies", a),
   },
 
   visits: {
@@ -222,6 +234,11 @@ export const localProvider: DataProvider = {
       const rows = await all<Product>("products");
       const t = norm(term);
       return t ? rows.filter((p) => norm(p.code).includes(t) || norm(p.name).includes(t)) : rows;
+    },
+    async listHospitals(term) {
+      const rows = await all<Hospital>("hospitals");
+      const t = norm(term);
+      return t ? rows.filter((h) => norm(h.name).includes(t) || norm(h.code).includes(t)) : rows;
     },
     async findProduct(code) {
       return (await all<Product>("products")).find((p) => p.code === code) ?? null;

@@ -46,6 +46,10 @@ export function saveConsent(
   });
 }
 
+export function listHospitals(term?: string) {
+  return db().stats.listHospitals(term);
+}
+
 export function listEquipment(doctorId: string) {
   return db().equipment.listByDoctor(doctorId);
 }

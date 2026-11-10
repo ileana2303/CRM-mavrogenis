@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { LAST_SEARCH_COOKIE } from "@/lib/constants";
 import { BackLink, Badge, Notice, PageTitle } from "@/components/ui";
 import { CheckInButtons } from "@/components/check-in-buttons";
 import { el } from "@/lib/i18n/el";
+import { Icon, type IconName } from "@/components/icons";
 import { requireUser } from "@/server/auth/current-user";
 import { doctorFullName, getConsent, getDoctor } from "@/server/services/customer-service";
 import { openCheckIn } from "@/server/services/checkin-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { listProjects } from "@/server/services/project-service";
+import { lastAutopsy } from "@/server/services/autopsy-service";
+import { fmtDate } from "@/lib/format";
 
 export const metadata = { title: el.hub.title };
 
@@ -15,32 +20,49 @@ export default async function HubPage({ params, searchParams }: { params: Promis
   const session = await requireUser();
   const { id } = await params;
   const { saved } = await searchParams;
+  // «Πίσω» is history-back; this href only matters on a cold deep link, then it reopens the last search
+  const lastQ = (await cookies()).get(LAST_SEARCH_COOKIE)?.value ?? "";
+  const backHref = lastQ ? `/customers?q=${encodeURIComponent(lastQ)}` : "/customers";
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
-  const [consent, open, pending, projects] = await Promise.all([getConsent(id), openCheckIn(id, session), pendingForDoctor(id), listProjects(id)]);
+  const [consent, openRes, pending, projects, autopsy] = await Promise.all([
+    getConsent(id),
+    openCheckIn(id, session).then((r) => ({ open: r, error: null as string | null }), (e: unknown) => ({ open: null, error: e instanceof Error ? e.message : String(e) })),
+    pendingForDoctor(id),
+    listProjects(id),
+    lastAutopsy(id),
+  ]);
+  const open = openRes.open;
   const active = projects.filter((p) => p.status === "ACTIVE").length;
 
-  const tiles: Array<{ href: string; label: string; icon: string; meta?: React.ReactNode }> = [
-    { href: `/customers/${id}/equipment`, label: el.hub.equipment, icon: "🩺" },
-    { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "📝" },
-    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "💼", meta: active ? <Badge tone="blue">{active}</Badge> : null },
-    { href: `/customers/${id}/offers`, label: el.hub.offers, icon: "📄" },
-    { href: `/customers/${id}/history`, label: el.hub.history, icon: "📊" },
-    { href: `/customers/${id}/kpis`, label: el.hub.kpis, icon: "📈" },
+  const tiles: Array<{ href: string; label: string; icon: IconName; meta?: React.ReactNode }> = [
+    {
+      href: `/customers/${id}/autopsy`,
+      label: el.hub.autopsy,
+      icon: "clipboard",
+      meta: autopsy ? <Badge tone="green">{fmtDate(autopsy.date)}</Badge> : <Badge tone="amber">{el.hub.autopsyNone}</Badge>,
+    },
+    { href: `/customers/${id}/equipment`, label: el.hub.equipment, icon: "stethoscope" },
+    { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "pen" },
+    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null },
+    { href: `/customers/${id}/offers`, label: el.hub.offers, icon: "file" },
+    { href: `/customers/${id}/history`, label: el.hub.history, icon: "chart" },
+    { href: `/customers/${id}/kpis`, label: el.hub.kpis, icon: "trending" },
     {
       href: `/customers/${id}/pending`,
       label: el.hub.pending,
-      icon: "⏰",
+      icon: "alarm",
       meta: pending.counts.overdue ? <Badge tone="red">{pending.counts.overdue}</Badge> : pending.counts.open ? <Badge tone="amber">{pending.counts.open}</Badge> : null,
     },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <BackLink href="/customers" />
+      <BackLink href={backHref} />
       <PageTitle
         right={
           <Link href={`/customers/${id}/edit`} className="btn-secondary">
+            <Icon.pen size={18} />
             {el.customer.edit}
           </Link>
         }
@@ -64,26 +86,34 @@ export default async function HubPage({ params, searchParams }: { params: Promis
         <Info label={el.customer.email} value={doctor.email} href={doctor.email ? `mailto:${doctor.email}` : undefined} />
         <Info label={el.customer.afm} value={doctor.afm} />
         <Info label={el.customer.activityType} value={doctor.activityType ? el.enums.activityType[doctor.activityType] : ""} />
-        <Info label={el.customer.rank} value={[doctor.rank ? el.enums.rank[doctor.rank] : "", doctor.hospital].filter(Boolean).join(" · ")} />
+        <Info label={el.customer.rank} value={[doctor.rank ? el.enums.rank[doctor.rank] : "", (doctor.hospitals ?? []).map((h) => h.name).join(", ")].filter(Boolean).join(" · ")} />
       </section>
 
+      {session.role === "SALESPERSON" && openRes.error && (
+        <Notice tone="red">
+          {el.customer.arrivalTitle}: {el.app.error} — <span className="font-mono text-xs">{openRes.error}</span>
+        </Notice>
+      )}
       {session.role === "SALESPERSON" && <CheckInButtons doctorId={id} open={open ? { arrivedAt: open.arrivedAt } : null} />}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {tiles.map((t) => (
-          <Link key={t.href} href={t.href} className="tile">
-            <span className="text-2xl" aria-hidden>
-              {t.icon}
-            </span>
-            <span className="flex items-center gap-2 font-semibold text-brand-800 leading-tight">
-              {t.label}
-              {t.meta}
-            </span>
-          </Link>
-        ))}
-        <div className="tile opacity-70 cursor-not-allowed" aria-disabled>
-          <span className="text-2xl" aria-hidden>
-            🔧
+        {tiles.map((t) => {
+          const Ic = Icon[t.icon];
+          return (
+            <Link key={t.href} href={t.href} className="tile">
+              <span className="tile-icon">
+                <Ic size={24} />
+              </span>
+              <span className="flex items-center gap-2 font-semibold text-brand-800 leading-tight">
+                {t.label}
+                {t.meta}
+              </span>
+            </Link>
+          );
+        })}
+        <div className="tile opacity-60 cursor-not-allowed hover:translate-y-0 hover:shadow-none" aria-disabled>
+          <span className="tile-icon from-gray-100 to-gray-200 text-gray-500">
+            <Icon.wrench size={24} />
           </span>
           <span className="font-semibold text-brand-800 leading-tight">
             {el.hub.service}

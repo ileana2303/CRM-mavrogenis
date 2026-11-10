@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
-import { BackLink, Card, DoctorLine, Empty, Field, PageTitle, entries } from "@/components/ui";
+import { BackLink, Card, DoctorLine, Empty, Field, PageTitle, optionsFrom } from "@/components/ui";
 import { DictationTextarea } from "@/components/dictation-textarea";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listVisits } from "@/server/services/visit-service";
 import { listProjects } from "@/server/services/project-service";
-import { saveVisitAction } from "../../actions";
+import { saveVisitAction, saveVisitThenProjectAction } from "../../actions";
 
 export const metadata = { title: el.visit.title };
 
@@ -26,32 +27,14 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       <form action={saveVisitAction} className="card p-4 flex flex-col gap-4">
         <input type="hidden" name="doctorId" value={id} />
         <Field label={el.visit.contactMethod}>
-          <select name="contactMethod" className="input" defaultValue="VISIT">
-            {entries(el.enums.visitContactMethod).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
+          <Select name="contactMethod" defaultValue="VISIT" options={optionsFrom(el.enums.visitContactMethod)} />
         </Field>
         <Field label={el.visit.topic}>
-          <select name="topic" className="input" defaultValue="GENERAL">
-            {entries(el.enums.visitTopic).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
+          <Select name="topic" defaultValue="GENERAL" options={optionsFrom(el.enums.visitTopic)} />
         </Field>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label={el.visit.outcome}>
-            <select name="outcome" className="input" defaultValue="NONE">
-              {entries(el.enums.visitOutcome).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
+            <Select name="outcome" defaultValue="NONE" options={optionsFrom(el.enums.visitOutcome)} />
           </Field>
           <Field label={el.visit.nextDate} hint="ΗΗ / ΜΜ / ΕΕΕΕ">
             <input type="date" name="nextActionDate" className="input" />
@@ -59,24 +42,17 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
         </div>
         {active.length > 0 && (
           <Field label={el.projects.project}>
-            <select name="projectId" className="input" defaultValue="">
-              <option value="">{el.app.none}</option>
-              {active.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title} ({p.code})
-                </option>
-              ))}
-            </select>
+            <Select name="projectId" defaultValue="" options={[{ value: "", label: el.app.none }, ...active.map((p) => ({ value: p.id, label: p.title, hint: p.code }))]} />
           </Field>
         )}
         <Field label={el.visit.comment}>
           <DictationTextarea name="comment" placeholder={el.visit.commentPlaceholder} rows={4} />
         </Field>
         <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-          <button name="intent" value="newProject" className="btn-secondary">
+          <button formAction={saveVisitThenProjectAction} className="btn-secondary">
             {el.visit.newProject}
           </button>
-          <button name="intent" value="save" className="btn-primary">
+          <button className="btn-primary">
             {el.app.save}
           </button>
         </div>

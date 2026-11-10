@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Diagnostic Equipment – CRM Πωλητών",
   applicationName: "DE CRM",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "DE CRM" },
+  // iPad Safari would otherwise turn ΑΦΜ and other 9–10 digit numbers into phone links
+  formatDetection: { telephone: false, address: false, email: false, date: false },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
   manifest: "/manifest.webmanifest",
 };

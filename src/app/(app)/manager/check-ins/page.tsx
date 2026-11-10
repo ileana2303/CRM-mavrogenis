@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { fmtDate, fmtDuration, fmtTime, todayIso } from "@/lib/format";
 import { requireUser } from "@/server/auth/current-user";
 import { listSalespeople } from "@/server/services/auth-service";
@@ -77,14 +78,7 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
         </label>
         <label className="block col-span-2 md:col-span-1">
           <span className="label">{el.managerArea.salesperson}</span>
-          <select name="user" defaultValue={sp.user ?? ""} className="input">
-            <option value="">{el.app.all}</option>
-            {salespeople.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.fullName}
-              </option>
-            ))}
-          </select>
+          <Select name="user" defaultValue={sp.user ?? ""} options={[{ value: "", label: el.app.all }, ...salespeople.map((u) => ({ value: u.id, label: u.fullName }))]} />
         </label>
         <button className="btn-primary col-span-2 md:col-span-1">{el.daily.apply}</button>
       </form>

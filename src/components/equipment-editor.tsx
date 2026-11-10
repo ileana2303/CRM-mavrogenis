@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { el } from "@/lib/i18n/el";
 import { entries } from "@/components/ui";
+import { Select } from "@/components/select";
 import type { Equipment, EquipmentCategory } from "@/server/domain/types";
 
 type Row = Omit<Equipment, "id" | "doctorId">;
@@ -107,34 +108,26 @@ export function EquipmentEditor({ initial }: { initial: Row[] }) {
 
 function CategorySelect({ value, onChange }: { value: EquipmentCategory; onChange: (v: EquipmentCategory) => void }) {
   return (
-    <select className="input" value={value} onChange={(e) => onChange(e.target.value as EquipmentCategory)}>
-      {entries(el.enums.equipmentCategory).map(([v, l]) => (
-        <option key={v} value={v}>
-          {l}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onChange={(v) => onChange(v as EquipmentCategory)} options={entries(el.enums.equipmentCategory).map(([v, l]) => ({ value: v, label: l }))} ariaLabel={el.equipment.category} />
   );
 }
 
 function YearSelect({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
   return (
-    <select className="input" value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
-      <option value="">—</option>
-      {years.map((y) => (
-        <option key={y} value={y}>
-          {y}
-        </option>
-      ))}
-    </select>
+    <Select value={value ?? ""} onChange={(v) => onChange(v ? Number(v) : null)} options={[{ value: "", label: "—" }, ...years.map((y) => ({ value: String(y), label: String(y) }))]} ariaLabel={el.equipment.purchaseYear} />
   );
 }
 
 function YesNo({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <select className="input" value={value ? "1" : "0"} onChange={(e) => onChange(e.target.value === "1")}>
-      <option value="1">{el.app.yes.toUpperCase()}</option>
-      <option value="0">{el.app.no.toUpperCase()}</option>
-    </select>
+    <Select
+      value={value ? "1" : "0"}
+      onChange={(v) => onChange(v === "1")}
+      options={[
+        { value: "1", label: el.app.yes.toUpperCase() },
+        { value: "0", label: el.app.no.toUpperCase() },
+      ]}
+      ariaLabel={el.equipment.serviceContract}
+    />
   );
 }

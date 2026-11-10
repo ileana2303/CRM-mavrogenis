@@ -14,6 +14,7 @@ export type CollectionName =
   | "doctors"
   | "consents"
   | "equipment"
+  | "autopsies"
   | "visits"
   | "projects"
   | "project_events"
@@ -22,6 +23,7 @@ export type CollectionName =
   | "tasks"
   | "check_ins"
   | "products"
+  | "hospitals"
   | "doctor_history"
   | "targets"
   | "sales_turnover";
@@ -38,12 +40,34 @@ export function collectionExists(name: CollectionName) {
   return fs.existsSync(fileFor(name));
 }
 
+const VERSION_FILE = path.join(DATA_DIR, ".seed-version");
+
+export function readSeedVersion(): string {
+  try {
+    return fs.readFileSync(VERSION_FILE, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+export function writeSeedVersion(v: string) {
+  ensureDataDir();
+  fs.writeFileSync(VERSION_FILE, v, "utf8");
+}
+
 export function readCollection<T>(name: CollectionName): T[] {
   const file = fileFor(name);
   if (!fs.existsSync(file)) return [];
-  const raw = fs.readFileSync(file, "utf8");
-  if (!raw.trim()) return [];
-  return JSON.parse(raw) as T[];
+  // A concurrent write (tmp + rename) can expose an empty/partial file for a moment: retry once.
+  for (let attempt = 0; ; attempt++) {
+    const raw = fs.readFileSync(file, "utf8");
+    try {
+      return raw.trim() ? (JSON.parse(raw) as T[]) : [];
+    } catch (e) {
+      if (attempt >= 2) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+    }
+  }
 }
 
 let writeQueue: Promise<void> = Promise.resolve();

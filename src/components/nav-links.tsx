@@ -4,54 +4,47 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { el } from "@/lib/i18n/el";
 import type { Role } from "@/server/domain/types";
+import { Icon, type IconName } from "./icons";
 
 interface Item {
   href: string;
   label: string;
-  icon: string;
+  icon: IconName;
   match: (p: string) => boolean;
 }
 
-export function NavLinks({ role, lastDoctorId, variant }: { role: Role; lastDoctorId?: string; variant: "side" | "bottom" }) {
+export function NavLinks({ role, variant, compact = false }: { role: Role; variant: "side" | "bottom"; compact?: boolean }) {
   const pathname = usePathname();
   const items: Item[] = [];
 
   if (role !== "SUPPORT") {
-    items.push({ href: "/dashboard", label: el.nav.daily, icon: "📅", match: (p) => p.startsWith("/dashboard") });
-    items.push({
-      href: "/customers",
-      label: el.nav.customer,
-      icon: "🔎",
-      match: (p) => p === "/customers" || p.startsWith("/customers/results") || p === "/customers/new",
-    });
-    items.push({
-      href: lastDoctorId ? `/customers/${lastDoctorId}` : "/customers",
-      label: el.nav.hub,
-      icon: "🗂️",
-      match: (p) => /^\/customers\/[^/]+(?!\/results)/.test(p) && p !== "/customers/new" && !p.startsWith("/customers/results"),
-    });
-    items.push({ href: "/kpis", label: el.nav.kpis, icon: "📈", match: (p) => p.startsWith("/kpis") });
+    items.push({ href: "/dashboard", label: el.nav.daily, icon: "calendar", match: (p) => p.startsWith("/dashboard") });
+    // «Πελάτης» covers search, create and every customer screen (hub + tabs)
+    items.push({ href: "/customers", label: el.nav.customer, icon: "search", match: (p) => p.startsWith("/customers") });
+    items.push({ href: "/kpis", label: el.nav.kpis, icon: "trending", match: (p) => p.startsWith("/kpis") });
   }
   if (role === "MANAGER") {
-    items.push({ href: "/manager/check-ins", label: el.nav.manager, icon: "👥", match: (p) => p.startsWith("/manager") });
+    items.push({ href: "/manager/check-ins", label: el.nav.manager, icon: "users", match: (p) => p.startsWith("/manager") });
   }
   if (role === "SUPPORT" || role === "MANAGER") {
-    items.push({ href: "/support/requests", label: el.nav.support, icon: "📨", match: (p) => p.startsWith("/support") });
+    items.push({ href: "/support/requests", label: el.nav.support, icon: "inbox", match: (p) => p.startsWith("/support") });
   }
 
   if (variant === "side") {
+    // compact (collapsed rail): icon + tiny label stacked; expanded: icon + label in a row
     return (
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-1 w-full">
         {items.map((it) => {
           const active = it.match(pathname);
-          return (
-            <Link
-              key={it.label}
-              href={it.href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium ${active ? "bg-brand-600 text-white" : "text-brand-800 hover:bg-brand-50"}`}
-            >
-              <span aria-hidden>{it.icon}</span>
-              {it.label}
+          const Ic = Icon[it.icon];
+          return compact ? (
+            <Link key={it.label} href={it.href} title={it.label} aria-label={it.label} className={`nav-item justify-center w-14 h-14 px-0 mx-auto ${active ? "nav-item-active" : ""}`}>
+              <Ic size={24} />
+            </Link>
+          ) : (
+            <Link key={it.label} href={it.href} className={`nav-item ${active ? "nav-item-active" : ""}`}>
+              <Ic size={22} />
+              <span>{it.label}</span>
             </Link>
           );
         })}
@@ -69,9 +62,10 @@ export function NavLinks({ role, lastDoctorId, variant }: { role: Role; lastDoct
               href={it.href}
               className={`flex flex-col items-center justify-center gap-0.5 py-2 min-h-14 text-[11px] font-medium leading-tight text-center ${active ? "text-brand-700" : "text-[var(--muted)]"}`}
             >
-              <span className={`text-lg ${active ? "" : "grayscale opacity-80"}`} aria-hidden>
-                {it.icon}
-              </span>
+              {(() => {
+                const Ic = Icon[it.icon];
+                return <Ic size={22} />;
+              })()}
               <span className="px-1">{it.label}</span>
             </Link>
           </li>

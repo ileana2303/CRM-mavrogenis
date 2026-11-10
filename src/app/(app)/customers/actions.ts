@@ -7,6 +7,7 @@ import { requireUser } from "@/server/auth/current-user";
 import type { ActivityType, DoctorRank, EquipmentCategory } from "@/server/domain/types";
 import { createDoctor, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
+import { recordAutopsy } from "@/server/services/autopsy-service";
 import { arrive, depart } from "@/server/services/checkin-service";
 import { addTask, completeTask, reopenTask } from "@/server/services/task-service";
 import { setOfferClosed } from "@/server/services/offer-service";
@@ -25,7 +26,14 @@ function doctorInput(fd: FormData): DoctorInput {
     clinicAddress: str(fd, "clinicAddress"),
     city: str(fd, "city"),
     postalCode: str(fd, "postalCode"),
-    hospital: str(fd, "hospital"),
+    hospitals: fd
+      .getAll("hospitalId")
+      .map(String)
+      .filter(Boolean)
+      .map((id) => {
+        const name = str(fd, `hospitalName_${id}`);
+        return { id, name };
+      }),
     afm: str(fd, "afm"),
     rank: (["RESIDENT", "CURATOR", "DIRECTOR", "PROFESSOR"].includes(rank) ? rank : undefined) as DoctorRank | undefined,
   };
@@ -82,6 +90,44 @@ export async function saveEquipmentAction(fd: FormData) {
   );
   revalidatePath(`/customers/${doctorId}/equipment`);
   redirect(`/customers/${doctorId}?saved=equipment`);
+}
+
+/** «Συγκατάθεση γιατρού» on the doctor form: save, then go to the consent screen. */
+export async function saveDoctorThenConsentAction(fd: FormData) {
+  fd.set("intent", "consent");
+  return saveDoctorAction(fd);
+}
+
+/** «Αποθήκευση & Νέο Project» on the autopsy form. */
+export async function saveAutopsyThenProjectAction(fd: FormData) {
+  fd.set("intent", "newProject");
+  return saveAutopsyAction(fd);
+}
+
+/** «+ Νέο Project» on the visit form. */
+export async function saveVisitThenProjectAction(fd: FormData) {
+  fd.set("intent", "newProject");
+  return saveVisitAction(fd);
+}
+
+export async function saveAutopsyAction(fd: FormData) {
+  const user = await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const parsed = equipmentSchema.safeParse(JSON.parse(str(fd, "rows") || "[]"));
+  if (!parsed.success) redirect(`/customers/${doctorId}/autopsy/new?error=1`);
+  await recordAutopsy(
+    doctorId,
+    {
+      date: str(fd, "date"),
+      comments: str(fd, "comments"),
+      equipment: parsed.data.map((r) => ({ ...r, category: r.category as EquipmentCategory })),
+    },
+    user,
+  );
+  revalidatePath(`/customers/${doctorId}`);
+  revalidatePath(`/customers/${doctorId}/equipment`);
+  if (str(fd, "intent") === "newProject") redirect(`/customers/${doctorId}/projects/new`);
+  redirect(`/customers/${doctorId}?saved=autopsy`);
 }
 
 export async function saveVisitAction(fd: FormData) {

@@ -9,6 +9,8 @@ export function SignaturePad({ name }: { name: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const drawing = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
+  // ink is tracked in a ref too: the pointer-up handler may run before React re-rendered with hasInk=true
+  const inkRef = useRef(false);
   const [hasInk, setHasInk] = useState(false);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function SignaturePad({ name }: { name: string }) {
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.strokeStyle = "#15223b";
-      if (hasInk) {
+      if (inkRef.current) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
         img.src = data;
@@ -43,7 +45,7 @@ export function SignaturePad({ name }: { name: string }) {
   };
 
   const commit = () => {
-    if (inputRef.current) inputRef.current.value = hasInk || drawing.current ? canvasRef.current!.toDataURL("image/png") : "";
+    if (inputRef.current) inputRef.current.value = inkRef.current ? canvasRef.current!.toDataURL("image/png") : "";
   };
 
   const onDown = (e: React.PointerEvent) => {
@@ -55,6 +57,7 @@ export function SignaturePad({ name }: { name: string }) {
     ctx.beginPath();
     ctx.arc(last.current.x, last.current.y, 1, 0, Math.PI * 2);
     ctx.fill();
+    inkRef.current = true;
     setHasInk(true);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -67,6 +70,7 @@ export function SignaturePad({ name }: { name: string }) {
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     last.current = p;
+    commit();
   };
   const onUp = () => {
     drawing.current = false;
@@ -77,6 +81,7 @@ export function SignaturePad({ name }: { name: string }) {
     const c = canvasRef.current!;
     const ctx = c.getContext("2d")!;
     ctx.clearRect(0, 0, c.width, c.height);
+    inkRef.current = false;
     setHasInk(false);
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -86,7 +91,8 @@ export function SignaturePad({ name }: { name: string }) {
       <div className="relative rounded-xl border-2 border-dashed border-brand-200 bg-white overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="block w-full h-48 sm:h-56 touch-none cursor-crosshair"
+          className="block w-full h-48 sm:h-56 md:h-64 touch-none cursor-crosshair select-none"
+          style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}

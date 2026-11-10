@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink, DoctorLine, Empty, PageTitle } from "@/components/ui";
-import { ClosedBadge, OfferStatusBadge } from "@/components/project-badges";
+import { OfferStatusBadge } from "@/components/project-badges";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listOffersForDoctor } from "@/server/services/offer-service";
@@ -27,11 +28,11 @@ export default async function OffersPage({ params }: { params: Promise<{ id: str
           <Empty>{el.offers.empty}</Empty>
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="table">
+        <div className="card overflow-x-auto max-w-full">
+          <table className="table min-w-[640px]">
             <thead>
               <tr>
-                <th className="w-10">{el.offers.no}</th>
+                <th className="w-10 hidden lg:table-cell">{el.offers.no}</th>
                 <th>{el.offers.date}</th>
                 <th>{el.offers.offerTitle}</th>
                 <th className="text-right">{el.offers.value}</th>
@@ -43,7 +44,7 @@ export default async function OffersPage({ params }: { params: Promise<{ id: str
             <tbody>
               {offers.map((o, i) => (
                 <tr key={o.id}>
-                  <td className="tabular-nums">{i + 1}</td>
+                  <td className="tabular-nums hidden lg:table-cell">{i + 1}</td>
                   <td className="whitespace-nowrap">{fmtDate(o.date)}</td>
                   <td>
                     <span className="font-medium">{o.title}</span>
@@ -56,16 +57,21 @@ export default async function OffersPage({ params }: { params: Promise<{ id: str
                     <OfferStatusBadge status={o.status} />
                   </td>
                   <td>
-                    <form action={setOfferClosedAction} className="flex items-center gap-2">
+                    <form action={setOfferClosedAction} className="flex items-center gap-1">
                       <input type="hidden" name="doctorId" value={id} />
                       <input type="hidden" name="offerId" value={o.id} />
-                      <ClosedBadge closed={o.closed} />
-                      <select name="closed" className="input min-h-9 py-1 text-sm w-28" defaultValue={o.closed ?? ""} aria-label={el.offers.setClosed}>
-                        <option value="">—</option>
-                        <option value="YES">{el.app.yes}</option>
-                        <option value="NO">{el.app.no}</option>
-                        <option value="PARTIAL">{el.app.partial}</option>
-                      </select>
+                      <Select
+                        name="closed"
+                        className="w-32"
+                        defaultValue={o.closed ?? ""}
+                        ariaLabel={el.offers.setClosed}
+                        options={[
+                          { value: "", label: "—" },
+                          { value: "YES", label: el.app.yes },
+                          { value: "NO", label: el.app.no },
+                          { value: "PARTIAL", label: el.app.partial },
+                        ]}
+                      />
                       <button className="btn-ghost min-h-9 text-sm">OK</button>
                     </form>
                   </td>

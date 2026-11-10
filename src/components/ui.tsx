@@ -1,14 +1,7 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { el } from "@/lib/i18n/el";
 
-export function BackLink({ href, label }: { href: string; label?: string }) {
-  return (
-    <Link href={href} className="btn-ghost -ml-3 text-brand-700">
-      {label ?? el.app.back}
-    </Link>
-  );
-}
+export { BackLink } from "./back-link";
 
 export function PageTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
@@ -108,4 +101,9 @@ export function DoctorLine({ name }: { name: string }) {
 
 export function entries<T extends string>(o: Record<T, string>): Array<[T, string]> {
   return Object.entries(o) as Array<[T, string]>;
+}
+
+/** Record<value,label> → options for <Select> (server-safe helper; keeps insertion order). */
+export function optionsFrom(o: Record<string, string>): Array<{ value: string; label: string }> {
+  return Object.entries(o).map(([value, label]) => ({ value, label }));
 }

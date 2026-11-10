@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
+    orientation: "any", // iPads are used in both orientations
     background_color: "#f3f6fa",
     theme_color: "#0b5fa5",
     icons: [

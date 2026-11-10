@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Card, Empty, PageTitle } from "@/components/ui";
+import { Card, Empty, Notice, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { fmtDate } from "@/lib/format";
 import { requireUser } from "@/server/auth/current-user";
 import type { DailyReportItem } from "@/server/domain/types";
@@ -37,13 +38,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {session.role === "MANAGER" ? (
           <label className="block col-span-2 md:col-span-1">
             <span className="label">{el.daily.salespersonFilter}</span>
-            <select name="user" defaultValue={userId} className="input">
-              {salespeople.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.fullName}
-                </option>
-              ))}
-            </select>
+            <Select name="user" defaultValue={userId} options={salespeople.map((u) => ({ value: u.id, label: u.fullName }))} />
           </label>
         ) : (
           <div className="hidden md:block" />
@@ -52,6 +47,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </form>
 
       <div className="grid gap-4 md:grid-cols-2">
+        {report.errors.length > 0 && (
+          <Notice tone="red">
+            <span className="font-semibold">{el.app.error}</span>
+            <pre className="mt-1 whitespace-pre-wrap text-xs font-mono">{report.errors.join("\n")}</pre>
+          </Notice>
+        )}
         <Section title={el.daily.appointments} items={report.appointments} tone="blue" />
         <Section title={el.daily.offerFollowUps} items={report.offerFollowUps} tone="teal" />
         <Section title={el.daily.overdue} items={report.overdue} tone="red" />

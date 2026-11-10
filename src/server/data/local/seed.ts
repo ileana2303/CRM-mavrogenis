@@ -12,6 +12,7 @@ import type {
   DoctorYearStat,
   Equipment,
   FollowUp,
+  Hospital,
   Offer,
   Product,
   Project,
@@ -22,7 +23,10 @@ import type {
   User,
   Visit,
 } from "../../domain/types";
-import { collectionExists, writeCollection } from "./store";
+import { collectionExists, readSeedVersion, writeCollection, writeSeedVersion } from "./store";
+
+/** Bump when the shape of the demo data changes; an older data/ folder is then re-seeded automatically. */
+export const SEED_VERSION = "2";
 
 // ---------- helpers --------------------------------------------------------
 
@@ -119,7 +123,16 @@ const CITIES = [
   ["Βόλος", "38221"], ["Ιωάννινα", "45221"], ["Χανιά", "73100"], ["Καβάλα", "65302"], ["Ρόδος", "85100"],
   ["Λαμία", "35100"], ["Κόρινθος", "20100"],
 ] as const;
-const HOSPITALS = ["Γ.Ν.Α. «Γ. Γεννηματάς»", "Π.Γ.Ν. ΑΧΕΠΑ", "Π.Γ.Ν. Πατρών", "ΠΑ.Γ.Ν.Η.", "Γ.Ν. Λάρισας", "Οφθαλμιατρείο Αθηνών"] as const;
+const HOSPITAL_LIST: Hospital[] = [
+  { id: "1", code: "1001", name: "ΑΓΙΑ ΣΟΦΙΑ" },
+  { id: "2", code: "1002", name: "Γ.Ν.Α. «Γ. Γεννηματάς»" },
+  { id: "3", code: "1003", name: "Π.Γ.Ν. ΑΧΕΠΑ" },
+  { id: "4", code: "1004", name: "Π.Γ.Ν. Πατρών" },
+  { id: "5", code: "1005", name: "ΠΑ.Γ.Ν.Η." },
+  { id: "6", code: "1006", name: "Γ.Ν. Λάρισας" },
+  { id: "7", code: "1007", name: "Οφθαλμιατρείο Αθηνών" },
+  { id: "8", code: "1008", name: "Γ.Ν. Λιβαδειάς" },
+];
 const STREETS = ["Λεωφ. Κηφισίας", "Βασ. Σοφίας", "Εγνατία", "Τσιμισκή", "Μαιζώνος", "Λεωφ. Αλεξάνδρας", "Πανεπιστημίου", "Αγ. Δημητρίου"] as const;
 
 function doctors(): Doctor[] {
@@ -135,7 +148,7 @@ function doctors(): Doctor[] {
       clinicAddress: "Λεωφ. Κηφισίας 128",
       city: "Αθήνα",
       postalCode: "11526",
-      hospital: "",
+      hospitals: [],
       afm: "045678912",
       rank: "DIRECTOR",
       ownerUserId: U.ilias,
@@ -152,7 +165,7 @@ function doctors(): Doctor[] {
       clinicAddress: "Αισχύλου 14",
       city: "Λιβαδειά",
       postalCode: "32100",
-      hospital: "Γ.Ν. Λιβαδειάς",
+      hospitals: [{ ...HOSPITAL_LIST[7], lineNo: 1 }],
       afm: "060212345",
       rank: "CURATOR",
       ownerUserId: U.ilias,
@@ -189,7 +202,7 @@ function doctors(): Doctor[] {
       clinicAddress: `${pick(STREETS)} ${int(2, 180)}`,
       city,
       postalCode: zip,
-      hospital: isPublic ? pick(HOSPITALS) : "",
+      hospitals: isPublic ? [{ ...pick(HOSPITAL_LIST), lineNo: 1 }] : [],
       afm: String(int(100000000, 199999999)),
       rank: isPublic ? pick(ranks) : pick(["CURATOR", "DIRECTOR"] as const),
       ownerUserId: i % 4 === 3 ? U.maria : U.ilias,
@@ -755,7 +768,7 @@ function salesTurnover(): SalesTurnover[] {
 // ---------- entry point ----------------------------------------------------
 
 export async function seedIfEmpty() {
-  if (collectionExists("users")) return;
+  if (collectionExists("users") && readSeedVersion() === SEED_VERSION) return;
   await seedAll();
 }
 
@@ -775,7 +788,9 @@ export async function seedAll() {
   await writeCollection("tasks", [...papadopoulosTasks(), ...gen.tasks]);
   await writeCollection("check_ins", gen.checkIns);
   await writeCollection("products", prods);
+  await writeCollection("hospitals", HOSPITAL_LIST);
   await writeCollection("doctor_history", papadopoulosHistory());
   await writeCollection("targets", targets());
   await writeCollection("sales_turnover", salesTurnover());
+  writeSeedVersion(SEED_VERSION);
 }

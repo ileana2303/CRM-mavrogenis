@@ -14,12 +14,18 @@ export function defaultRange(): DateRange {
 
 /** Αναφορά Ημέρας for one salesperson. */
 export async function dailyReport(userId: string, range: DateRange): Promise<DailyReport> {
+  const errors: string[] = [];
+  const safe = <T,>(label: string, p: Promise<T[]>) =>
+    p.catch((e: unknown) => {
+      errors.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+      return [] as T[];
+    });
   const [visits, followUps, tasks, offers, projects] = await Promise.all([
-    db().visits.listByUser(userId),
-    db().projects.listFollowUpsByUser(userId, range),
-    db().tasks.listByUser(userId),
-    db().offers.listByRequester(userId),
-    db().projects.listByUser(userId),
+    safe("visits", db().visits.listByUser(userId)),
+    safe("followUps", db().projects.listFollowUpsByUser(userId, range)),
+    safe("tasks", db().tasks.listByUser(userId)),
+    safe("offers", db().offers.listByRequester(userId)),
+    safe("projects", db().projects.listByUser(userId)),
   ]);
   const doctorIds = new Set<string>();
   [...visits, ...tasks, ...offers].forEach((x) => doctorIds.add(x.doctorId));
@@ -106,5 +112,6 @@ export async function dailyReport(userId: string, range: DateRange): Promise<Dai
     offerFollowUps: offerFollowUps.sort(byDate),
     overdue: overdue.sort(byDate),
     pendingOffers: pendingOffers.sort(byDate),
+    errors,
   };
 }

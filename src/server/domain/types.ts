@@ -31,7 +31,8 @@ export interface Doctor {
   clinicAddress: string;
   city: string;
   postalCode: string;
-  hospital: string;
+  /** Linked hospitals (SoftOne detail CCCTRDHSPTL → master CCCHSPTL) */
+  hospitals: HospitalRef[];
   afm: string;
   rank?: DoctorRank;
   ownerUserId: string;
@@ -39,6 +40,17 @@ export interface Doctor {
   softoneTrdr?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Hospital {
+  id: string;
+  code?: string;
+  name: string;
+}
+
+export interface HospitalRef extends Hospital {
+  /** SoftOne detail line number (needed to update/delete the link) */
+  lineNo?: number;
 }
 
 export interface ConsentChannels {
@@ -80,6 +92,25 @@ export interface Equipment {
   purchaseYear: number | null;
   serviceContract: boolean;
   serialNumber?: string;
+}
+
+/**
+ * Αυτοψία: the first visit at a customer, recording what equipment they already have.
+ * SoftOne: SOMEETING series 2002 (COMMENTS = findings + equipment summary); the rows also
+ * replace the customer's Εξοπλισμός list.
+ */
+export interface Autopsy {
+  id: string;
+  doctorId: string;
+  userId: string;
+  userName?: string;
+  date: string; // YYYY-MM-DD
+  comments: string;
+  equipment: Omit<Equipment, "id" | "doctorId">[];
+  /** SoftOne SOACTION id / document code (FCC0000001) once stored there */
+  s1Id?: string;
+  code?: string;
+  createdAt: string;
 }
 
 export type VisitContactMethod = "VISIT" | "PHONE" | "EMAIL";
@@ -241,6 +272,8 @@ export interface CheckIn {
   arriveLng?: number;
   departLat?: number;
   departLng?: number;
+  /** SoftOne SOACTION id (SOMEETING series 2002) when the arrival was sent to SoftOne */
+  s1Id?: string;
 }
 
 export interface Product {
@@ -312,4 +345,6 @@ export interface DailyReport {
   offerFollowUps: DailyReportItem[];
   overdue: DailyReportItem[];
   pendingOffers: DailyReportItem[];
+  /** data sources that failed (e.g. a SoftOne endpoint) – shown on the page instead of crashing it */
+  errors: string[];
 }

@@ -9,9 +9,10 @@ type SR = {
   interimResults: boolean;
   start(): void;
   stop(): void;
+  abort(): void;
   onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
 };
 
 function getRecognition(): (new () => SR) | null {
@@ -20,7 +21,14 @@ function getRecognition(): (new () => SR) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** Textarea with Web Speech API dictation (el-GR). */
+const isApple = () => typeof navigator !== "undefined" && /iPad|iPhone|Macintosh/.test(navigator.userAgent) && "ontouchend" in document;
+
+/**
+ * Textarea with Web Speech API dictation (el-GR).
+ * iPad Safari (primary target): `webkitSpeechRecognition` exists since iPadOS 14.5, needs a secure context
+ * (HTTPS) and Siri/Dictation enabled in Settings. Safari ends a session after a pause, so while the user
+ * has not pressed stop we restart it and append to the text already captured.
+ */
 export function DictationTextarea({
   name,
   placeholder,
@@ -35,29 +43,32 @@ export function DictationTextarea({
   const [value, setValue] = useState(defaultValue);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
+  const [insecure, setInsecure] = useState(false);
   const recRef = useRef<SR | null>(null);
+  const wantRef = useRef(false);
   const baseRef = useRef("");
+  const restartsRef = useRef(0);
 
   useEffect(() => {
     setSupported(!!getRecognition());
-    return () => recRef.current?.stop();
+    setInsecure(typeof window !== "undefined" && !window.isSecureContext);
+    return () => {
+      wantRef.current = false;
+      recRef.current?.abort();
+    };
   }, []);
 
-  const toggle = () => {
-    if (listening) {
-      recRef.current?.stop();
-      setListening(false);
-      return;
-    }
+  const startSession = () => {
     const Ctor = getRecognition();
     if (!Ctor) return setSupported(false);
     const rec = new Ctor();
     rec.lang = "el-GR";
-    rec.continuous = true;
+    // Safari handles short sessions better; Chrome is happy with continuous.
+    rec.continuous = !isApple();
     rec.interimResults = true;
-    baseRef.current = value ? value.replace(/\s+$/, "") + " " : "";
+    let finalText = "";
     rec.onresult = (e) => {
-      let finalText = "";
+      finalText = "";
       let interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
@@ -66,28 +77,65 @@ export function DictationTextarea({
       }
       setValue((baseRef.current + finalText + interim).trimStart());
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      baseRef.current = (baseRef.current + finalText).replace(/\s+$/, "") + (finalText ? " " : "");
+      if (wantRef.current && restartsRef.current < 20) {
+        restartsRef.current++;
+        try {
+          startSession();
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+      wantRef.current = false;
+      setListening(false);
+    };
+    rec.onerror = (e) => {
+      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+        wantRef.current = false;
+        setSupported(false);
+      }
+    };
     recRef.current = rec;
     rec.start();
-    setListening(true);
   };
+
+  const toggle = () => {
+    if (listening) {
+      wantRef.current = false;
+      recRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    baseRef.current = value ? value.replace(/\s+$/, "") + " " : "";
+    restartsRef.current = 0;
+    wantRef.current = true;
+    setListening(true);
+    try {
+      startSession();
+    } catch {
+      wantRef.current = false;
+      setListening(false);
+      setSupported(false);
+    }
+  };
+
+  const disabled = !supported || insecure;
 
   return (
     <div className="flex flex-col gap-2">
       <textarea name={name} className="input" rows={rows} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} />
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={toggle}
-          disabled={!supported}
-          className={listening ? "btn-danger" : "btn-secondary"}
-          aria-pressed={listening}
-        >
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={toggle} disabled={disabled} className={listening ? "btn-danger" : "btn-secondary"} aria-pressed={listening}>
           <span aria-hidden>{listening ? "⏹" : "🎤"}</span>
           {listening ? el.visit.dictating : el.visit.dictate}
         </button>
-        {!supported && <span className="text-xs text-[var(--muted)]">{el.visit.dictateUnsupported}</span>}
+        {insecure ? (
+          <span className="text-xs text-[var(--muted)]">{el.visit.dictateInsecure}</span>
+        ) : (
+          !supported && <span className="text-xs text-[var(--muted)]">{el.visit.dictateUnsupported}</span>
+        )}
       </div>
     </div>
   );

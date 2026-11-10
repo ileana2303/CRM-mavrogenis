@@ -18,7 +18,7 @@ export default async function ConsentPage({ params, searchParams }: { params: Pr
   const signedBy = existing ? await userName(existing.byUserId) : null;
 
   return (
-    <div className="flex flex-col gap-4 max-w-3xl">
+    <div className="flex flex-col gap-4">
       <BackLink href={`/customers/${id}`} />
       <PageTitle>{el.consent.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />

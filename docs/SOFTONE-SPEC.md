@@ -120,8 +120,32 @@ Detail **`CCCCRMPROJECTEVENT`** (ΙΣΤΟΡΙΚΟ PROJECT, slide 15)
 | `DESCR` | memo |
 | `USERID` | link → USERS |
 
-### 2.4 `CCCCRMOFFER` — Προσφορά με εκδόσεις (slides 14, 17, 19) + αίτημα προς Υποστήριξη
-Recommended as a custom table so Support can price it **before** a real SALDOC exists.
+### 2.4 Offers — DECIDED 2026-10-24: **SALDOC with a dedicated series**, not a custom table
+One SALDOC document per offer **version** (V1, V2…), all in one series «Προσφορά CRM». The document number
+(`FINCODE`) is the Q-number shown in the app; the app shows `FINCODE/V<CCCVERSION>`.
+Support prices the same document and sets `CCCCRMSTATUS = 2`; the salesperson sets 3 when it is sent.
+
+Header (`FINDOC`) custom fields:
+| Field | Type | Meaning |
+|---|---|---|
+| `CCCPROJECT` | int → CCCCRMPROJECT.ID | the project this offer belongs to |
+| `CCCVERSION` | int | 1, 2, 3… |
+| `CCCCRMSTATUS` | int | 1 = Αίτημα, 2 = Τιμολογήθηκε (Support), 3 = Στάλθηκε |
+| `CCCREVREASON` | memo | Αιτιολογία αναθεώρησης (required by the app for V2+) |
+| `CCCCLOSED` | int, nullable | 1 Ναι, 2 Όχι, 3 Μερικώς |
+| `CCCSUPPORTNOTES` | memo | notes Support returns with the price |
+| `CCCREQUESTEDBY` | link → USERS | salesperson |
+| `CCCANSWEREDBY` / `CCCANSWEREDAT` | link → USERS / datetime | Support |
+
+Standard header fields used: `TRDR`, `TRNDATE`, `SERIES`, `FINCODE`, `SUMAMNT` (total), `COMMENTS` (Παρατηρήσεις).
+Lines (`MTRLINES`): standard `MTRL`, `QTY1`, `PRICE`, `DISC1PRC` (Έκπτωση), `DISC2PRC` (Ειδική έκπτωση), `LINEVAL`;
+custom `CCCFLOORPRICE` (decimal), `CCCPREVPRICE` (decimal, nullable – Προηγούμενη τιμή for V2+).
+
+**Decided:** `SERIES = 7015` («Προσφορά CRM»); `DISC2PRC` is enabled → Ειδική έκπτωση maps to it.
+
+The original custom-table proposal is kept below for reference only.
+
+#### (superseded) `CCCCRMOFFER` custom table
 | Field | Type |
 |---|---|
 | `PROJECT` | link |
@@ -250,14 +274,27 @@ Everything in CRM_DAILY_REPORT, CRM_PENDING_COUNTS and CRM_HISTORY the app can a
 
 ## 5. Services and access
 
-5.1 **Web service user and appId.** Give me the `/s1services` URL, `appId`, COMPANY/BRANCH/MODULE/REFID for `authenticate`. Decide one of:
-- (A) each salesperson logs in to the CRM with their own SoftOne username/password (audit trail in SoftOne; needs a web-service licence per concurrent user), or
-- (B) one service account for the app, and the CRM users live in a `CCCCRMUSER` table (USERNAME, PASSWORDHASH, ROLE, SALESMAN, MANAGER). I recommend (A) if licences allow.
+5.1 **Connection — DECIDED 2026-10-24.** `https://mavrogenis.oncloud.gr/s1services`, appId `1306`, COMPANY `1001`,
+BRANCH `1000`, Series 6. Responses are gzip + `charset=windows-1253` (the client decodes by charset).
+**Login is per user**: each salesperson/manager/support user logs in to the CRM with their own SoftOne
+username/password; the app keeps the `clientID` in the session cookie. Each user needs web-service rights
+and `CCCCRMROLE` set. MODULE/REFID: I take them from the `login` response (`objs`), unless you tell me fixed values.
 
 5.2 **Objects exposed to setData/getData**: CUSTOMER (with the custom fields), ITEM (read only), and one object per table in section 2 with its detail tables (CCCCRMPROJECT → CCCCRMPROJECTLINE + CCCCRMPROJECTEVENT; CCCCRMOFFER → CCCCRMOFFERLINE). Browser lists on each with filters on TRDR, SALESMAN/USERID, STATUS, dates.
 
-5.3 **Numbering.** `PR-YYYY-NNNN` and `Q-YYYY-NNNN` share one sequence per year. Either give me a SoftOne sequence (a tiny `CCCCRMSEQ` table YEAR, LASTNO that the app updates), or let the app take `MAX(CODE)+1` on `CCCCRMPROJECT`. The seq table is safer with several salespeople online.
+5.3 **Numbering — DECIDED 2026-10-24: no sequence table.**
+- Project code = `PR-<year>-<CCCCRMPROJECT.ID padded to 4>` (e.g. record 142 created in 2026 → `PR-2026-0142`).
+  SoftOne's own ID is unique, so two salespeople saving at the same moment can never get the same code.
+  `CCCCRMPROJECT.CODE` is therefore **not needed** – drop that column.
+- Offer number = the SALDOC series number (`FINCODE`), plus `/V<CCCVERSION>`. The slides' pairing
+  (PR-2026-0142 ↔ Q-2026-0142) was a mock-up; the real pair is project ID ↔ document number.
 
 5.4 **Dates/times**: send and accept ISO `YYYY-MM-DD HH:MM:SS`; the app shows `ΗΗ/ΜΜ/ΕΕΕΕ`.
 
 5.5 **Service module (next version)**: nothing needed now. The CRM shows a «Service — Σύντομα διαθέσιμο» tile. When you are ready, `CCCCRMEQUIP.SERIALNUM` is the join key to the service-ticket objects from `NEW EBS V2.xlsx`.
+
+
+## Αυτοψία (added 2026-11-10)
+Lives in **SOMEETING series 2002** (see SOFTONE-API.md §4a). The CRM writes the header with standard `setData`
+(SERIES, TRDR, TRNDATE, COMMENTS); the equipment rows captured during the autopsy replace the customer's equipment list
+(storage of those rows in SoftOne still to be decided: ACTLINES vs CCCCRMEQUIP vs text in COMMENTS).

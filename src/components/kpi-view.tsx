@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { Select } from "@/components/select";
 import { el } from "@/lib/i18n/el";
 import { fmtEur, fmtPct } from "@/lib/format";
 import type { KpiPeriod, Kpis } from "@/server/domain/types";
@@ -20,35 +21,16 @@ export function PeriodForm({
       <p className="col-span-2 md:col-span-1 text-sm font-semibold text-[var(--muted)] md:self-center">{el.kpis.period}</p>
       <label className="block">
         <span className="label">{el.kpis.year}</span>
-        <select name="year" defaultValue={period.year} className="input">
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+        <Select name="year" defaultValue={period.year} options={years.map((y) => ({ value: String(y), label: String(y) }))} />
       </label>
       <label className="block">
         <span className="label">{el.kpis.month}</span>
-        <select name="month" defaultValue={period.month} className="input">
-          <option value={0}>{el.kpis.wholeYear}</option>
-          {el.months.map((m, i) => (
-            <option key={m} value={i + 1}>
-              {m}
-            </option>
-          ))}
-        </select>
+        <Select name="month" defaultValue={period.month} options={[{ value: "0", label: el.kpis.wholeYear }, ...el.months.map((m, i) => ({ value: String(i + 1), label: m }))]} />
       </label>
       {salespeople && salespeople.length > 0 ? (
         <label className="block col-span-2 md:col-span-1">
           <span className="label">{el.kpis.salesperson}</span>
-          <select name="user" defaultValue={selectedUser} className="input">
-            {salespeople.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.fullName}
-              </option>
-            ))}
-          </select>
+          <Select name="user" defaultValue={selectedUser ?? salespeople[0]?.id} options={salespeople.map((u) => ({ value: u.id, label: u.fullName }))} />
         </label>
       ) : (
         <div className="hidden md:block" />

@@ -1,14 +1,20 @@
 /**
- * SoftOne adapter – TO BE COMPLETED once the SoftOne objects exist (docs/SOFTONE-SPEC.md).
- * Every method lists the SoftOne call it should make. Until implemented, each throws
- * NotImplemented so that misconfiguration is loud, not silent.
+ * SoftOne adapter. Implemented against the JS endpoints that exist today (docs/SOFTONE-API.md);
+ * every other method throws NotImplemented so misconfiguration is loud.
+ *
+ * The per-user SoftOne clientID is taken from the CRM session cookie (login is per user).
  */
-import type { DataProvider } from "../provider";
-import { S1Client, s1ConfigFromEnv } from "./client";
+import { redirect } from "next/navigation";
+import { getSession } from "../../auth/session";
+import type { Autopsy, CheckIn, Doctor, Task, User } from "../../domain/types";
+import type { DataProvider, DoctorSearch } from "../provider";
+import { equipmentSummary } from "@/lib/equipment-summary";
+import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
+import { CRM_FORM, arrivalToSetData, autopsyToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToHospital, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
-    super(`SoftOneProvider.${what} is not implemented yet`);
+    super(`SoftOneProvider.${what}: the SoftOne endpoint is not built yet (see docs/SOFTONE-API.md)`);
   }
 }
 const todo = (what: string) => async (): Promise<never> => {
@@ -16,43 +22,144 @@ const todo = (what: string) => async (): Promise<never> => {
 };
 
 export const s1 = new S1Client(s1ConfigFromEnv());
+const offerSeries = () => Number(process.env.S1_OFFER_SERIES ?? 7015);
+const autopsySeries = () => Number(process.env.S1_AUTOPSY_SERIES ?? 2002);
+const arrivalSeries = () => Number(process.env.S1_ARRIVAL_SERIES ?? 2001);
+const taskSeries = () => Number(process.env.S1_TASK_SERIES ?? 3000);
+/** statuses shown in the CRM: everything except 4 Ακυρώθηκε */
+const TASK_STATUSES = "0,1,2,3,5,6";
+
+async function clientId(): Promise<string> {
+  const s = await getSession();
+  if (!s?.s1ClientId) redirect("/login?expired=1");
+  return s.s1ClientId;
+}
+
+/** PRSN of the logged-in SoftOne user (api.crm/me) – the salesman identity for ACTPRSN. */
+async function sessionPrsn(): Promise<string> {
+  const s = await getSession();
+  const prsn = s?.s1Prsn ?? s?.userId;
+  if (!prsn) redirect("/login?expired=1");
+  return prsn;
+}
+
+/** Runs a JS call; an expired SoftOne session sends the user back to login. */
+async function js<T>(script: string, fn: string, params: Record<string, unknown>) {
+  const cid = await clientId();
+  try {
+    return await s1.js<T>(cid, script, fn, params);
+  } catch (e) {
+    if (e instanceof S1Error && /login|credentials|clientid/i.test(e.message)) redirect("/login?expired=1");
+    throw e;
+  }
+}
+
+/** Single doctor – read only through the owner's endpoint api.crm.customers/getData. */
+async function customerById(id: string): Promise<Doctor | null> {
+  if (!/^\d+$/.test(id)) return null;
+  try {
+    const res = await js<S1CustomerRow[]>("api.crm.customers", "getData", { trdr: Number(id) });
+    const row = res.data?.[0];
+    return row ? rowToDoctor(row) : null;
+  } catch (e) {
+    if (e instanceof S1Error && /no data/i.test(e.message)) return null;
+    throw e;
+  }
+}
 
 export const softOneProvider: DataProvider = {
   name: "softone",
 
   users: {
-    // login/authenticate + SqlData CRM_ME
+    // Users are authenticated by SoftOne itself (auth-service → s1.login + api.crm/me).
     findByUsername: todo("users.findByUsername"),
     findById: todo("users.findById"),
-    list: todo("users.list"),
+    // api.crm/users → PRSN rows { prsn, name, crmRole, manager, isActive }; the PRSN id is the user id in the CRM
+    async list(): Promise<User[]> {
+      const res = await js<Array<{ prsn: string | number; name?: string; crmRole?: number | string; manager?: string | number; isActive?: string | number }>>("api.crm", "users", {});
+      return (res.data ?? [])
+        .filter((u) => String(u.isActive ?? "1") !== "0")
+        .map((u) => ({
+          id: String(u.prsn),
+          username: "",
+          passwordHash: "",
+          fullName: u.name ?? "",
+          role: String(u.crmRole) === "2" ? "MANAGER" : String(u.crmRole) === "3" ? "SUPPORT" : "SALESPERSON",
+          salesPersonCode: String(u.prsn),
+          managerId: u.manager !== undefined && u.manager !== null ? String(u.manager) : undefined,
+        }));
+    },
   },
+
   doctors: {
-    // SqlData CRM_DOCTOR_SEARCH
-    search: todo("doctors.search"),
-    // getData CUSTOMER
-    findById: todo("doctors.findById"),
-    findByIds: todo("doctors.findByIds"),
-    // setData CUSTOMER (+ CCC fields)
-    create: todo("doctors.create"),
-    update: todo("doctors.update"),
-    // setData/getData CCCCRMCONSENT
-    saveConsent: todo("doctors.saveConsent"),
-    getConsent: todo("doctors.getConsent"),
+    async search(q: DoctorSearch) {
+      // S1_DOCTORS_ONLY=0 searches all customers – useful until CCCISDOCTOR is set on the doctors
+      const params: Record<string, unknown> = { page: 1, pageSize: 60 };
+      if (process.env.S1_DOCTORS_ONLY !== "0") params.isDoctor = 1;
+      // api.crm.customers/list filters: name (NAME LIKE), afm, mobilePhone (TRDEXTRA.VARCHAR03), phone02
+      // simple search: q over all fields (owner's endpoint, 2026-11-10); the separate fields stay as a fallback
+      if (q.q?.trim()) params.q = q.q.trim();
+      const name = [q.lastName, q.firstName].filter((s) => s && s.trim()).join(" ");
+      if (name) params.name = name;
+      if (q.afm?.trim()) params.afm = q.afm.trim();
+      if (q.mobile?.trim()) params.mobilePhone = q.mobile.trim();
+      if (!params.q && !params.name && !params.afm && !params.mobilePhone) return [];
+      const res = await js<S1CustomerRow[]>("api.crm.customers", "list", params);
+      return (res.data ?? []).map(rowToDoctor);
+    },
+    findById: customerById,
+    async findByIds(ids) {
+      const rows = await Promise.all([...new Set(ids)].map(customerById));
+      return rows.filter((d): d is Doctor => !!d);
+    },
+    // Create/update go through the standard CUSTOMER object (setData) – decided 2026-10-25.
+    async create(d) {
+      const cid = await clientId();
+      const session = await getSession();
+      const payload = doctorToSetData(d);
+      if (session?.s1Salesman) payload.CUSTOMER[0].SALESMAN = Number(session.s1Salesman); // decided 2026-11-10: owner = logged-in PRSN
+      const res = await s1.setData(cid, "CUSTOMER", payload, undefined, CRM_FORM);
+      const id = String(res.id);
+      return (await customerById(id)) ?? { ...d, id };
+    },
+    async update(id, patch) {
+      const cid = await clientId();
+      const current = await customerById(id);
+      if (!current) throw new S1Error(`CUSTOMER ${id} not found`);
+      const delta = doctorUpdateDelta(patch, current); // header delta + full detail only if the links changed
+      if (Object.keys(delta).length) await s1.setData(cid, "CUSTOMER", delta, Number(id), CRM_FORM);
+      return (await customerById(id)) ?? current;
+    },
+    // Συγκατάθεση: signature PNG → api.crm.customers/setSignature { trdr, data (base64), size, name } – decided 2026-11-10.
+    // Channels (email/sms/phone/viber) have no SoftOne field yet; the hybrid provider keeps them locally.
+    async saveConsent(c) {
+      const base64 = c.signaturePng.replace(/^data:image\/\w+;base64,/, "");
+      const size = Buffer.from(base64, "base64").length;
+      await js("api.crm.customers", "setSignature", { trdr: Number(c.doctorId), data: base64, size, name: c.signerName });
+      return { ...c, id: `s1-${c.doctorId}` };
+    },
+    // read: the `signatures` array of api.crm.customers/getData (decided 2026-11-10)
+    async getConsent(doctorId) {
+      if (!/^\d+$/.test(doctorId)) return null;
+      const res = await js<S1CustomerRow[]>("api.crm.customers", "getData", { trdr: Number(doctorId) });
+      const row = res.data?.[0];
+      return row ? rowToConsent(row) : null;
+    },
   },
-  equipment: {
-    // browser CCCCRMEQUIP filtered by TRDR / setData
-    listByDoctor: todo("equipment.listByDoctor"),
-    replaceForDoctor: todo("equipment.replaceForDoctor"),
+
+  equipment: { listByDoctor: todo("equipment.listByDoctor"), replaceForDoctor: todo("equipment.replaceForDoctor") },
+  autopsies: {
+    // reads need api.crm.actions/list (object SOMEETING, series 2002) – not built yet
+    listByDoctor: todo("autopsies.listByDoctor"),
+    // write = standard setData on SOMEETING; returns the SOACTION id
+    async create(a) {
+      const cid = await clientId();
+      const res = await s1.setData(cid, "SOMEETING", autopsyToSetData(a, autopsySeries(), equipmentSummary(a.equipment)));
+      return { ...a, id: String(res.id), s1Id: String(res.id) } as Autopsy;
+    },
   },
-  visits: {
-    // CCCCRMVISIT
-    listByDoctor: todo("visits.listByDoctor"),
-    listByUser: todo("visits.listByUser"),
-    listAll: todo("visits.listAll"),
-    create: todo("visits.create"),
-  },
+  visits: { listByDoctor: todo("visits.listByDoctor"), listByUser: todo("visits.listByUser"), listAll: todo("visits.listAll"), create: todo("visits.create") },
   projects: {
-    // CCCCRMPROJECT (+ CCCCRMPROJECTLINE, CCCCRMPROJECTEVENT), CCCCRMFOLLOWUP, CCCCRMSEQ
     listByDoctor: todo("projects.listByDoctor"),
     listByUser: todo("projects.listByUser"),
     listAll: todo("projects.listAll"),
@@ -67,33 +174,98 @@ export const softOneProvider: DataProvider = {
     addFollowUp: todo("projects.addFollowUp"),
   },
   offers: {
-    // CCCCRMOFFER (+ CCCCRMOFFERLINE)
-    listByDoctor: todo("offers.listByDoctor"),
-    listByProject: todo("offers.listByProject"),
-    listByRequester: todo("offers.listByRequester"),
-    listAll: todo("offers.listAll"),
-    findById: todo("offers.findById"),
+    // Decided 2026-11-10: the doctor's tab shows offers of ALL series (read); the CRM writes only to series 7015.
+    async listByDoctor(doctorId) {
+      const res = await js<S1OfferRow[]>("api.crm.offers", "list", { trdr: Number(doctorId), page: 1, pageSize: 200 });
+      return (res.data ?? []).map(rowToOffer).sort((a, b) => b.date.localeCompare(a.date));
+    },
+    async listByProject(projectId) {
+      const res = await js<S1OfferRow[]>("api.crm.offers", "list", { cccproject: Number(projectId), series: offerSeries(), page: 1, pageSize: 50 });
+      return (res.data ?? []).map(rowToOffer).sort((a, b) => b.version - a.version);
+    },
+    async listByRequester(userId) {
+      const res = await js<S1OfferRow[]>("api.crm.offers", "list", { cccrequestedby: Number(userId), series: offerSeries(), page: 1, pageSize: 200 });
+      return (res.data ?? []).map(rowToOffer);
+    },
+    async listAll() {
+      const res = await js<S1OfferRow[]>("api.crm.offers", "list", { series: offerSeries(), page: 1, pageSize: 500 });
+      return (res.data ?? []).map(rowToOffer);
+    },
+    async findById(id) {
+      try {
+        const res = await js<S1OfferRow[]>("api.crm.offers", "getData", { findoc: Number(id) });
+        return res.data?.[0] ? rowToOffer(res.data[0]) : null;
+      } catch (e) {
+        if (e instanceof S1Error && /no data/i.test(e.message)) return null;
+        throw e;
+      }
+    },
+    // setData SALDOC (series 7015) – enabled once the CCC fields exist on FINDOC/MTRLINES
     create: todo("offers.create"),
     update: todo("offers.update"),
   },
+  // Εκκρεμότητες = SOTASK series 3000 (decided 2026-11-10); reads via api.crm.actions/getPendings
   tasks: {
-    // CCCCRMTASK
-    listByDoctor: todo("tasks.listByDoctor"),
-    listByUser: todo("tasks.listByUser"),
-    create: todo("tasks.create"),
-    update: todo("tasks.update"),
+    async listByDoctor(doctorId): Promise<Task[]> {
+      const prsn = await sessionPrsn();
+      const res = await js<S1PendingRow[]>("api.crm.actions", "getPendings", { trdr: Number(doctorId), prsn: Number(prsn), actStatus: TASK_STATUSES });
+      return (res.data ?? []).map((r) => rowToTask(r, doctorId, prsn)).filter((t): t is Task => !!t);
+    },
+    async listByUser(userId): Promise<Task[]> {
+      // needs getPendings without trdr (owner to make it optional)
+      const prsn = await sessionPrsn();
+      const res = await js<S1PendingRow[]>("api.crm.actions", "getPendings", { prsn: Number(prsn), actStatus: TASK_STATUSES });
+      return (res.data ?? []).map((r) => rowToTask(r, "", userId)).filter((t): t is Task => !!t);
+    },
+    async create(t) {
+      const cid = await clientId();
+      const prsn = await sessionPrsn();
+      const res = await s1.setData(cid, "SOTASK", taskToSetData(t, prsn, taskSeries()));
+      return { ...t, id: String(res.id) };
+    },
+    async update(id, patch) {
+      const cid = await clientId();
+      await s1.setData(cid, "SOTASK", taskPatchToSetData(patch), Number(id));
+      return { id, doctorId: "", userId: "", title: "", dueDate: "", status: "OPEN", source: "MANUAL", ...patch } as Task;
+    },
   },
+  // Άφιξη / Αναχώρηση = SOMEETING series 2001 (decided 2026-11-10): FROMDATE on arrival, FINALDATE on departure.
   checkIns: {
-    // CCCCRMCHECKIN
-    openForUser: todo("checkIns.openForUser"),
-    create: todo("checkIns.create"),
-    update: todo("checkIns.update"),
+    async openForUser(userId, doctorId): Promise<CheckIn | null> {
+      const prsn = await sessionPrsn();
+      const res = await js<S1PendingArrivalRow[]>("api.crm.actions", "getPendingArrivals", { trdr: Number(doctorId), prsn: Number(prsn) });
+      const row = res.data?.[0];
+      return row ? rowToCheckIn(row, userId, doctorId) : null;
+    },
+    async create(c) {
+      const cid = await clientId();
+      const prsn = await sessionPrsn();
+      const res = await s1.setData(cid, "SOMEETING", arrivalToSetData(c.doctorId, prsn, c.arrivedAt, arrivalSeries()));
+      return { ...c, id: String(res.id), s1Id: String(res.id) };
+    },
+    async update(id, patch) {
+      const cid = await clientId();
+      if (patch.departedAt) await s1.setData(cid, "SOMEETING", departureToSetData(patch.departedAt), Number(id));
+      return { id, doctorId: "", userId: "", arrivedAt: "", ...patch } as CheckIn;
+    },
+    // manager log: needs a list endpoint (api.crm.actions/list with series 2001) – not built yet
     list: todo("checkIns.list"),
   },
   stats: {
-    // SqlData CRM_PRODUCTS, CRM_HISTORY / CRM_TURNOVER_CUSTOMER_YEARS, CRM_TARGET, CRM_TURNOVER_SALESMAN
-    listProducts: todo("stats.listProducts"),
-    findProduct: todo("stats.findProduct"),
+    async listProducts(term) {
+      const res = await js<S1ProductRow[]>("api.crm.products", "list", { q: term?.trim() || undefined, page: 1, pageSize: 200 });
+      return (res.data ?? []).map(rowToProduct);
+    },
+    // hospitals master: api.crm/hospitals → { ccchsptl, code, name, isActive }
+    async listHospitals(term) {
+      const res = await js<Array<{ ccchsptl: string | number; code?: string; name?: string; isActive?: string | number }>>("api.crm", "hospitals", term?.trim() ? { q: term.trim() } : {});
+      return (res.data ?? []).filter((h) => String(h.isActive ?? "1") !== "0").map(rowToHospital);
+    },
+    async findProduct(code) {
+      const res = await js<S1ProductRow[]>("api.crm.products", "list", { code, page: 1, pageSize: 5 });
+      const row = (res.data ?? []).find((r) => r.code === code) ?? res.data?.[0];
+      return row ? rowToProduct(row) : null;
+    },
     doctorHistory: todo("stats.doctorHistory"),
     target: todo("stats.target"),
     turnover: todo("stats.turnover"),

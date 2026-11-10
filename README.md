@@ -58,18 +58,45 @@ src/
   middleware.ts              auth redirect + role gating (/manager, /support)
 ```
 
-Switch the data source with `DATA_PROVIDER=local|softone` in `.env.local`
-(`SESSION_SECRET` is required; see `.env.example`).
+Switch the data source with `DATA_PROVIDER=local|hybrid|softone` in `.env.local`
+(`SESSION_SECRET` is required; see `.env.example`). `hybrid` = SoftOne for everything that has an
+endpoint, local JSON for the rest – this is the mode used during the SoftOne roll-out.
 
 ### Connecting SoftOne
 
-Everything SoftOne must provide (custom tables, fields, named SQL, web-service objects) is specified in
-[`docs/SOFTONE-SPEC.md`](docs/SOFTONE-SPEC.md). Implementation goes into
-`src/server/data/softone/provider.ts` – one method per repo function, each annotated with the SoftOne
-call it should make. The UI and services do not change.
+Reads go through the owner's JS web-scripts (`/JS/api.crm.*`), writes through standard `setData`.
+The contract and what is still missing is in [`docs/SOFTONE-API.md`](docs/SOFTONE-API.md)
+(storage proposal: [`docs/SOFTONE-SPEC.md`](docs/SOFTONE-SPEC.md)). Implemented today in
+`src/server/data/softone/provider.ts`:
 
-## Browser notes
+| CRM | SoftOne |
+|---|---|
+| login / role / users | `login` + `authenticate`, `api.crm/me`, `api.crm/users` |
+| customers (search `q`, read, create, update, hospitals) | `api.crm.customers/list`, `/getData`; `setData CUSTOMER` form `_CRM_` |
+| Συγκατάθεση (signature) | `api.crm.customers/setSignature`; read from `signatures[]` of `getData` |
+| Άφιξη / Αναχώρηση | `SOMEETING` series `S1_ARRIVAL_SERIES` (2001): FROMDATE / FINALDATE; `api.crm.actions/getPendingArrivals` |
+| Αυτοψία | `SOMEETING` series `S1_AUTOPSY_SERIES` (2002) |
+| Εκκρεμότητες | `SOTASK` series `S1_TASK_SERIES` (3000): COMMENTS, DUEDATE, ACTSTATUS; `api.crm.actions/getPendings` |
+| products, offers (read) | `api.crm.products`, `api.crm.offers` (write series `S1_OFFER_SERIES` 7015) |
 
-- **Φωνητική υπαγόρευση** uses the Web Speech API with `el-GR`: Chrome (desktop/Android) and Edge. Firefox and iOS Safari show a fallback message.
-- **Υπογραφή** is a `<canvas>` with pointer events; stored as PNG data URL + timestamp + signer.
-- **Άφιξη/Αναχώρηση** asks for geolocation once; works without it (timestamps only). Visible to managers only.
+Everything else (projects, visits, follow-ups, KPIs, manager check-in log) is still local JSON.
+
+## iPad first
+
+About 90% of usage is Apple iPad (Safari / installed PWA). Design and test on iPadOS before anything else.
+
+- **Minimum iPadOS 16.4** (Tailwind v4 CSS). Older iPads render unstyled.
+- **Layout**: the sidebar layout starts at 768px, so every iPad (portrait 768–834px, landscape 1024–1366px) gets the
+  tablet layout; the bottom nav is for phones only. Orientation is unlocked in the manifest.
+- **Install**: Safari → Share → «Προσθήκη στην αρχική οθόνη». Runs full-screen (standalone); there is no browser back
+  button, which is why every screen has «‹ Πίσω».
+- **Secure context required on the device**: Safari blocks geolocation, the service worker and speech recognition on
+  plain `http://192.168.x.x:3000`. To test on an iPad against your PC either deploy to any HTTPS host, or run
+  `npx next dev --experimental-https -H 0.0.0.0` and trust the generated certificate on the iPad
+  (Settings › General › VPN & Device Management → install, then Settings › General › About › Certificate Trust Settings).
+- **Φωνητική υπαγόρευση**: Safari's `webkitSpeechRecognition` (iPadOS 14.5+) with `el-GR`. Needs Settings › General ›
+  Keyboard › Enable Dictation and a microphone permission for Safari. Safari ends a session after each pause; the
+  component restarts it automatically until you press stop. Chrome/Edge also work; Firefox does not.
+- **Υπογραφή**: `<canvas>` with pointer events, so finger and Apple Pencil both work; stored as PNG data URL + timestamp + signer.
+- **Άφιξη/Αναχώρηση**: asks for geolocation once (needs HTTPS); works without it (timestamps only). Visible to managers only.
+- Inputs are 16px so Safari never zooms on focus; phone-number auto-linking is disabled so ΑΦΜ is not rendered as a tel: link.

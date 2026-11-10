@@ -128,3 +128,9 @@ export async function markOfferSentAction(fd: FormData) {
   revalidatePath(`/customers/${offer.doctorId}`);
   redirect(`/customers/${offer.doctorId}/projects/${offer.projectId}?saved=sent`);
 }
+
+/** «Αίτημα Προσφοράς» button: create the project and open an offer request. */
+export async function createProjectRequestOfferAction(fd: FormData) {
+  fd.set("intent", "requestOffer");
+  return createProjectAction(fd);
+}

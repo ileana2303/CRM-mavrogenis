@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackLink, Field, Notice, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
+import { Select } from "@/components/select";
 import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { getProject } from "@/server/services/project-service";
@@ -48,10 +49,14 @@ export default async function ClosePage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
             <Field label={el.close.closing}>
-              <select name={`won_${l.lineNo}`} className="input" defaultValue={l.won === true ? "YES" : "NO"}>
-                <option value="YES">{el.app.yes}</option>
-                <option value="NO">{el.app.no}</option>
-              </select>
+              <Select
+                name={`won_${l.lineNo}`}
+                defaultValue={l.won === true ? "YES" : "NO"}
+                options={[
+                  { value: "YES", label: el.app.yes },
+                  { value: "NO", label: el.app.no },
+                ]}
+              />
             </Field>
             <Field label={el.close.competitor}>
               <input name={`competitor_${l.lineNo}`} className="input" defaultValue={l.competitor ?? ""} placeholder="OMMALITE" />

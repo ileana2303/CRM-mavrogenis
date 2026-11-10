@@ -6,7 +6,9 @@
  *   - softone/ : SoftOne web services (see docs/SOFTONE-SPEC.md)
  */
 import type {
+  Autopsy,
   CheckIn,
+  Hospital,
   Consent,
   Doctor,
   DoctorYearStat,
@@ -24,6 +26,8 @@ import type {
 } from "../domain/types";
 
 export interface DoctorSearch {
+  /** free text over every field (name, ΑΦΜ, κινητό, email, πόλη) – preferred */
+  q?: string;
   firstName?: string;
   lastName?: string;
   afm?: string;
@@ -56,6 +60,11 @@ export interface DoctorsRepo {
 export interface EquipmentRepo {
   listByDoctor(doctorId: string): Promise<Equipment[]>;
   replaceForDoctor(doctorId: string, rows: NewEntity<Equipment>[]): Promise<Equipment[]>;
+}
+
+export interface AutopsiesRepo {
+  listByDoctor(doctorId: string): Promise<Autopsy[]>;
+  create(a: NewEntity<Autopsy>): Promise<Autopsy>;
 }
 
 export interface VisitsRepo {
@@ -108,6 +117,7 @@ export interface CheckInsRepo {
 /** Master data that will come from SoftOne (items, targets, invoiced turnover). */
 export interface StatsRepo {
   listProducts(term?: string): Promise<Product[]>;
+  listHospitals(term?: string): Promise<Hospital[]>;
   findProduct(code: string): Promise<Product | null>;
   doctorHistory(doctorId: string): Promise<DoctorYearStat[]>;
   target(userId: string, year: number, month: number): Promise<Target | null>;
@@ -119,6 +129,7 @@ export interface DataProvider {
   users: UsersRepo;
   doctors: DoctorsRepo;
   equipment: EquipmentRepo;
+  autopsies: AutopsiesRepo;
   visits: VisitsRepo;
   projects: ProjectsRepo;
   offers: OffersRepo;
