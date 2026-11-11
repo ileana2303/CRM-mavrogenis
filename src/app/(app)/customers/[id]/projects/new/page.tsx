@@ -6,11 +6,14 @@ import { Select } from "@/components/select";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listProducts } from "@/server/services/project-service";
 import { createProjectAction, createProjectRequestOfferAction } from "../actions";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.projects.newTitle };
 
 export default async function NewProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (SOON.projects) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const products = await listProducts();

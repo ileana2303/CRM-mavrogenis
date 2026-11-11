@@ -6,11 +6,14 @@ import { el } from "@/lib/i18n/el";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { getProjectBundle } from "@/server/services/project-service";
 import { reviseAction } from "../../actions";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.revise.title };
 
 export default async function RevisePage({ params, searchParams }: { params: Promise<{ id: string; pid: string }>; searchParams: Promise<{ error?: string }> }) {
   const { id, pid } = await params;
+  if (SOON.projects) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const { error } = await searchParams;
   const [doctor, bundle] = await Promise.all([getDoctor(id), getProjectBundle(pid)]);
   if (!doctor || !bundle) notFound();

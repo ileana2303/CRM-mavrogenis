@@ -7,6 +7,8 @@ import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { getProjectBundle } from "@/server/services/project-service";
 import { markOfferSentAction, requestOfferAction } from "../actions";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.projects.view };
 
@@ -18,6 +20,7 @@ export default async function ProjectViewPage({
   searchParams: Promise<{ sent?: string; saved?: string }>;
 }) {
   const { id, pid } = await params;
+  if (SOON.projects) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const sp = await searchParams;
   const [doctor, bundle] = await Promise.all([getDoctor(id), getProjectBundle(pid)]);
   if (!doctor || !bundle || bundle.project.doctorId !== id) notFound();

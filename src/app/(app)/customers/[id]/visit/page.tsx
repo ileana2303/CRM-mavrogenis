@@ -8,11 +8,14 @@ import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listVisits } from "@/server/services/visit-service";
 import { listProjects } from "@/server/services/project-service";
 import { saveVisitAction, saveVisitThenProjectAction } from "../../actions";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.visit.title };
 
 export default async function VisitPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (SOON.visits) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const [visits, projects] = await Promise.all([listVisits(id), listProjects(id)]);

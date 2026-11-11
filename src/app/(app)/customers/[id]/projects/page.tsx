@@ -6,11 +6,14 @@ import { el } from "@/lib/i18n/el";
 import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { listProjects } from "@/server/services/project-service";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.projects.title };
 
 export default async function ProjectsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (SOON.projects) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const projects = await listProjects(id);

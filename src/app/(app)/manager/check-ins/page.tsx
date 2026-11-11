@@ -9,6 +9,8 @@ import { listCheckIns } from "@/server/services/checkin-service";
 import { doctorFullName } from "@/server/services/customer-service";
 import { kpisFor, defaultPeriod } from "@/server/services/kpi-service";
 import { fmtEur, fmtPct } from "@/lib/format";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.managerArea.checkIns };
 
@@ -16,6 +18,7 @@ type SP = { from?: string; to?: string; user?: string };
 
 export default async function CheckInsPage({ searchParams }: { searchParams: Promise<SP> }) {
   await requireUser(["MANAGER"]);
+  if (SOON.checkInLog) return <ComingSoon title={metadata.title} />;
   const sp = await searchParams;
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);

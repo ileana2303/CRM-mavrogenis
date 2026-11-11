@@ -3,11 +3,14 @@ import { BackLink, DoctorLine, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { fmtEur } from "@/lib/format";
 import { doctorFullName, doctorHistory, getDoctor, turnoverPerVisit } from "@/server/services/customer-service";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.history.title };
 
 export default async function HistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (SOON.history) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const { rows, total } = await doctorHistory(id);

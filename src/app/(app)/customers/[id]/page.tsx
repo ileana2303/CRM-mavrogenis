@@ -11,6 +11,7 @@ import { doctorFullName, getConsent, getDoctor } from "@/server/services/custome
 import { openCheckIn } from "@/server/services/checkin-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { listProjects } from "@/server/services/project-service";
+import { SOON } from "@/lib/features";
 
 export const metadata = { title: el.hub.title };
 
@@ -27,18 +28,18 @@ export default async function HubPage({ params, searchParams }: { params: Promis
     getConsent(id),
     openCheckIn(id, session).then((r) => ({ open: r, error: null as string | null }), (e: unknown) => ({ open: null, error: e instanceof Error ? e.message : String(e) })),
     pendingForDoctor(id),
-    listProjects(id),
+    SOON.projects ? null : listProjects(id),
   ]);
   const open = openRes.open;
-  const active = projects.filter((p) => p.status === "ACTIVE").length;
+  const active = projects?.filter((p) => p.status === "ACTIVE").length ?? 0;
 
-  const tiles: Array<{ href: string; label: string; icon: IconName; meta?: React.ReactNode }> = [
+  const tiles: Array<{ href: string; label: string; icon: IconName; meta?: React.ReactNode; soon?: boolean }> = [
     { href: `/customers/${id}/equipment`, label: el.hub.equipment, icon: "stethoscope" },
-    { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "pen" },
-    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null },
+    { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "pen", soon: SOON.visits },
+    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null, soon: SOON.projects },
     { href: `/customers/${id}/offers`, label: el.hub.offers, icon: "file" },
-    { href: `/customers/${id}/history`, label: el.hub.history, icon: "chart" },
-    { href: `/customers/${id}/kpis`, label: el.hub.kpis, icon: "trending" },
+    { href: `/customers/${id}/history`, label: el.hub.history, icon: "chart", soon: SOON.history },
+    { href: `/customers/${id}/kpis`, label: el.hub.kpis, icon: "trending", soon: SOON.kpis },
     {
       href: `/customers/${id}/pending`,
       label: el.hub.pending,
@@ -90,6 +91,18 @@ export default async function HubPage({ params, searchParams }: { params: Promis
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {tiles.map((t) => {
           const Ic = Icon[t.icon];
+          if (t.soon)
+            return (
+              <div key={t.href} className="tile opacity-60 cursor-not-allowed hover:translate-y-0 hover:shadow-none" aria-disabled>
+                <span className="tile-icon from-gray-100 to-gray-200 text-gray-500">
+                  <Ic size={24} />
+                </span>
+                <span className="font-semibold text-brand-800 leading-tight">
+                  {t.label}
+                  <span className="block text-xs font-normal text-[var(--muted)]">{el.app.comingSoon}</span>
+                </span>
+              </div>
+            );
           return (
             <Link key={t.href} href={t.href} className="tile">
               <span className="tile-icon">

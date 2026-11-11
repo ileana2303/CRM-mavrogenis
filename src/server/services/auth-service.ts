@@ -75,9 +75,7 @@ export async function listSalespeople() {
 }
 
 export async function userName(id: string) {
-  try {
-    return (await db().users.findById(id))?.fullName ?? "—";
-  } catch {
-    return "—";
-  }
+  const u = await db().users.findById(id);
+  if (!u) throw new Error(`PRSN ${id} is not in api.crm/users`);
+  return u.fullName;
 }

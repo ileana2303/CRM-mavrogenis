@@ -6,11 +6,14 @@ import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { getProject } from "@/server/services/project-service";
 import { followUpAction } from "../../actions";
+import { SOON } from "@/lib/features";
+import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.followUp.title };
 
 export default async function FollowUpPage({ params }: { params: Promise<{ id: string; pid: string }> }) {
   const { id, pid } = await params;
+  if (SOON.projects) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const [doctor, project] = await Promise.all([getDoctor(id), getProject(pid)]);
   if (!doctor || !project) notFound();
 

@@ -19,12 +19,6 @@ class NotImplemented extends Error {
 const todo = (what: string) => async (): Promise<never> => {
   throw new NotImplemented(what);
 };
-/**
- * Reads whose SoftOne endpoint is not built yet: return "no records" so screens render empty
- * instead of crashing. Writes stay on todo() and fail loudly. Missing endpoints: docs/SOFTONE-API.md.
- */
-const none = async (): Promise<never[]> => [];
-const absent = async (): Promise<null> => null;
 
 export const s1 = new S1Client(s1ConfigFromEnv());
 const offerSeries = () => Number(process.env.S1_OFFER_SERIES ?? 7015);
@@ -91,8 +85,11 @@ export const softOneProvider: DataProvider = {
 
   users: {
     // Users are authenticated by SoftOne itself (auth-service → s1.login + api.crm/me).
-    findByUsername: absent,
-    findById: absent,
+    findByUsername: todo("users.findByUsername"),
+    // no single-user endpoint: api.crm/users is small, so look the PRSN up in it
+    async findById(id) {
+      return (await softOneProvider.users.list()).find((u) => u.id === id) ?? null;
+    },
     // api.crm/users → PRSN rows { prsn, name, crmRole, manager, isActive }; the PRSN id is the user id in the CRM
     async list(): Promise<User[]> {
       const res = await js<Array<{ prsn: string | number; name?: string; crmRole?: number | string; manager?: string | number; isActive?: string | number }>>("api.crm", "users", {});
@@ -194,19 +191,19 @@ export const softOneProvider: DataProvider = {
       return softOneProvider.equipment.listByDoctor(doctorId);
     },
   },
-  visits: { listByDoctor: none, listByUser: none, listAll: none, create: todo("visits.create") },
+  visits: { listByDoctor: todo("visits.listByDoctor"), listByUser: todo("visits.listByUser"), listAll: todo("visits.listAll"), create: todo("visits.create") },
   projects: {
-    listByDoctor: none,
-    listByUser: none,
-    listAll: none,
-    findById: absent,
+    listByDoctor: todo("projects.listByDoctor"),
+    listByUser: todo("projects.listByUser"),
+    listAll: todo("projects.listAll"),
+    findById: todo("projects.findById"),
     create: todo("projects.create"),
     update: todo("projects.update"),
     nextSequence: todo("projects.nextSequence"),
-    listEvents: none,
+    listEvents: todo("projects.listEvents"),
     addEvent: todo("projects.addEvent"),
-    listFollowUps: none,
-    listFollowUpsByUser: none,
+    listFollowUps: todo("projects.listFollowUps"),
+    listFollowUpsByUser: todo("projects.listFollowUpsByUser"),
     addFollowUp: todo("projects.addFollowUp"),
   },
   offers: {
@@ -285,7 +282,7 @@ export const softOneProvider: DataProvider = {
       return { id, doctorId: "", userId: "", arrivedAt: "", ...patch } as CheckIn;
     },
     // manager log: needs a list endpoint (api.crm.actions/list with series 2001) – not built yet
-    list: none,
+    list: todo("checkIns.list"),
   },
   stats: {
     async listProducts(term) {
@@ -313,9 +310,9 @@ export const softOneProvider: DataProvider = {
       const row = (res.data ?? []).find((r) => r.code === code) ?? res.data?.[0];
       return row ? rowToProduct(row) : null;
     },
-    doctorHistory: none,
-    target: absent,
-    turnover: none,
+    doctorHistory: todo("stats.doctorHistory"),
+    target: todo("stats.target"),
+    turnover: todo("stats.turnover"),
     // api.crm/dashboard (owner, 2026-11-12): appointments 2003, follow-ups 3001, overdue 3000, pending offers 7015
     async dailyReport(userId, range) {
       const res = (await js<never>("api.crm", "dashboard", { prsn: Number(userId), fromDate: range.from, finalDate: range.to })) as unknown as S1DashboardResponse;
