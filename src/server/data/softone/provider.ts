@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -316,5 +316,10 @@ export const softOneProvider: DataProvider = {
     doctorHistory: none,
     target: absent,
     turnover: none,
+    // api.crm/dashboard (owner, 2026-11-12): appointments 2003, follow-ups 3001, overdue 3000, pending offers 7015
+    async dailyReport(userId, range) {
+      const res = (await js<never>("api.crm", "dashboard", { prsn: Number(userId), fromDate: range.from, finalDate: range.to })) as unknown as S1DashboardResponse;
+      return dashboardToReport(res);
+    },
   },
 };

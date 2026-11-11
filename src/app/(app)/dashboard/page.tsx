@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Empty, Notice, PageTitle } from "@/components/ui";
+import { Card, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { Select } from "@/components/select";
 import { DateRangeFields, FilterDialog } from "@/components/filter-dialog";
@@ -42,12 +42,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </PageTitle>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {report.errors.length > 0 && (
-          <Notice tone="red">
-            <span className="font-semibold">{el.app.error}</span>
-            <pre className="mt-1 whitespace-pre-wrap text-xs font-mono">{report.errors.join("\n")}</pre>
-          </Notice>
-        )}
         <Section title={el.daily.appointments} items={report.appointments} tone="blue" />
         <Section title={el.daily.offerFollowUps} items={report.offerFollowUps} tone="teal" />
         <Section title={el.daily.overdue} items={report.overdue} tone="red" />
@@ -80,7 +74,7 @@ function Section({ title, items, tone }: { title: string; items: DailyReportItem
                 <span className="text-xs font-semibold tabular-nums text-[var(--muted)] mt-0.5 w-20 shrink-0">{fmtDate(it.date)}</span>
                 <span className="min-w-0">
                   <span className="block font-medium truncate">{it.doctorName}</span>
-                  <span className="block text-sm text-[var(--muted)] truncate">{it.title}</span>
+                  {it.title && <span className="block text-sm text-[var(--muted)] truncate">{it.title}</span>}
                 </span>
               </Link>
             </li>

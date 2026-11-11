@@ -2,7 +2,8 @@
  * Row ↔ domain mapping for the SoftOne JS endpoints (docs/SOFTONE-API.md).
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
-import type { ActivityType, CheckIn, Consent, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import { S1Error } from "./client";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -507,4 +508,49 @@ export function machinesToSetData(rows: MachineInput[], current: Equipment[]): {
   }
   if (kept.size !== byLine.size) changed = true; // some lines were removed
   return changed ? { CCCTRDMACHINES: lines } : null;
+}
+
+/**
+ * Αναφορά Ημέρας ← api.crm/dashboard {prsn, fromDate, finalDate} (owner, 2026-11-12). One call, four arrays
+ * at the top level (no `data` envelope), every row carries trdr + trdr_customer_name:
+ *   appointments  SOMEETING 2003  {soaction, fromDate, finalDate, comments?, trdr, trdr_customer_name}
+ *   followUps     SOTASK 3001     {soaction, fromDate, comments, trdr, trdr_customer_name}
+ *   overdue       SOTASK 3000     {soaction, dueDate, actStatus, comments, trdr, trdr_customer_name}
+ *   pendingOffers SALDOC 7015     {findoc, fincode, trnDate, comments, trdr, trdr_customer_name}
+ * A row without id / trdr / date is a contract break → throw, never guess.
+ */
+export interface S1DashboardResponse {
+  appointments?: S1PendingRow[];
+  followUps?: S1PendingRow[];
+  overdue?: S1PendingRow[];
+  pendingOffers?: S1PendingRow[];
+}
+
+export function dashboardToReport(res: S1DashboardResponse): DailyReport {
+  const rows = (
+    section: keyof S1DashboardResponse,
+    kind: DailyReportItem["kind"],
+    idCol: string,
+    dateCol: string,
+    href: (trdr: string, id: string) => string,
+    title: (r: S1PendingRow) => string,
+  ): DailyReportItem[] =>
+    (res[section] ?? [])
+      .map((r) => {
+        const id = pickCol(r, idCol);
+        const trdr = pickCol(r, "trdr");
+        const date = pickCol(r, dateCol);
+        if (!id || !trdr || !date) throw new S1Error(`api.crm/dashboard ${section}: row without ${idCol}/trdr/${dateCol}: ${JSON.stringify(r).slice(0, 200)}`);
+        return { kind, date: date.slice(0, 10), doctorId: trdr, doctorName: pickCol(r, "trdr_customer_name") ?? "", title: title(r), href: href(trdr, id) };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  const comments = (r: S1PendingRow) => pickCol(r, "comments") ?? "";
+  return {
+    appointments: rows("appointments", "APPOINTMENT", "soaction", "fromdate", (t) => `/customers/${t}`, comments),
+    offerFollowUps: rows("followUps", "OFFER_FOLLOWUP", "soaction", "fromdate", (t) => `/customers/${t}`, comments),
+    overdue: rows("overdue", "OVERDUE", "soaction", "duedate", (t) => `/customers/${t}/pending`, comments),
+    pendingOffers: rows("pendingOffers", "PENDING_OFFER", "findoc", "trndate", (t) => `/customers/${t}/offers`, (r) =>
+      [pickCol(r, "fincode"), pickCol(r, "comments")].filter(Boolean).join(" – "),
+    ),
+  };
 }

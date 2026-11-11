@@ -5,6 +5,7 @@
  */
 import type {
   CheckIn,
+  DailyReport,
   Hospital,
   MachineCatalog,
   Consent,
@@ -117,6 +118,8 @@ export interface StatsRepo {
   doctorHistory(doctorId: string): Promise<DoctorYearStat[]>;
   target(userId: string, year: number, month: number): Promise<Target | null>;
   turnover(userId: string, year: number, month: number): Promise<SalesTurnover[]>;
+  /** Αναφορά Ημέρας of one salesperson (PRSN) – a single SoftOne call */
+  dailyReport(userId: string, range: DateRange): Promise<DailyReport>;
 }
 
 export interface DataProvider {

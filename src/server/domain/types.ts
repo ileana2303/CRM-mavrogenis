@@ -348,6 +348,4 @@ export interface DailyReport {
   offerFollowUps: DailyReportItem[];
   overdue: DailyReportItem[];
   pendingOffers: DailyReportItem[];
-  /** data sources that failed (e.g. a SoftOne endpoint) – shown on the page instead of crashing it */
-  errors: string[];
 }
