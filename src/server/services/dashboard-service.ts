@@ -30,7 +30,13 @@ export async function dailyReport(userId: string, range: DateRange): Promise<Dai
   const doctorIds = new Set<string>();
   [...visits, ...tasks, ...offers].forEach((x) => doctorIds.add(x.doctorId));
   projects.forEach((p) => doctorIds.add(p.doctorId));
-  const doctors = await db().doctors.findByIds([...doctorIds]);
+  // names only – a SoftOne hiccup here must not take the whole report down
+  const doctors = await db()
+    .doctors.findByIds([...doctorIds])
+    .catch((e: unknown) => {
+      errors.push(`names: ${e instanceof Error ? e.message : String(e)}`);
+      return [];
+    });
   const name = (id: string) => {
     const d = doctors.find((x) => x.id === id);
     return d ? doctorFullName(d) : "—";
