@@ -6,11 +6,10 @@
  */
 import { redirect } from "next/navigation";
 import { getSession } from "../../auth/session";
-import type { Autopsy, CheckIn, Doctor, Task, User } from "../../domain/types";
+import type { CheckIn, Doctor, MachineCatalog, MachineRef, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
-import { equipmentSummary } from "@/lib/equipment-summary";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, autopsyToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToHospital, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -23,7 +22,6 @@ const todo = (what: string) => async (): Promise<never> => {
 
 export const s1 = new S1Client(s1ConfigFromEnv());
 const offerSeries = () => Number(process.env.S1_OFFER_SERIES ?? 7015);
-const autopsySeries = () => Number(process.env.S1_AUTOPSY_SERIES ?? 2002);
 const arrivalSeries = () => Number(process.env.S1_ARRIVAL_SERIES ?? 2001);
 const taskSeries = () => Number(process.env.S1_TASK_SERIES ?? 3000);
 /** statuses shown in the CRM: everything except 4 Ακυρώθηκε */
@@ -66,6 +64,21 @@ async function customerById(id: string): Promise<Doctor | null> {
     throw e;
   }
 }
+
+/** api.crm/bootstrap master row: { id, code, name, isActive, mark? } */
+type S1MasterRow = { id: string | number; code?: string; name?: string; isActive?: string | number; mark?: string | number; markId?: string | number };
+const toRefs = (rows: S1MasterRow[] | undefined): MachineRef[] =>
+  (rows ?? [])
+    .filter((r) => String(r.isActive ?? "1") !== "0")
+    .map((r) => {
+      const mark = r.markId ?? r.mark;
+      return { id: String(r.id), code: String(r.code ?? r.id), name: r.name ?? "", ...(mark !== undefined && mark !== null && mark !== "" ? { markId: String(mark) } : {}) };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "el"));
+
+// master data is the same for every user → short in-memory cache
+let catalogCache: { at: number; data: MachineCatalog } | null = null;
+const CATALOG_TTL = 5 * 60_000;
 
 export const softOneProvider: DataProvider = {
   name: "softone",
@@ -147,15 +160,23 @@ export const softOneProvider: DataProvider = {
     },
   },
 
-  equipment: { listByDoctor: todo("equipment.listByDoctor"), replaceForDoctor: todo("equipment.replaceForDoctor") },
-  autopsies: {
-    // reads need api.crm.actions/list (object SOMEETING, series 2002) – not built yet
-    listByDoctor: todo("autopsies.listByDoctor"),
-    // write = standard setData on SOMEETING; returns the SOACTION id
-    async create(a) {
+  equipment: {
+    // read: machines[] of api.crm.customers/getData (owner, 2026-11-11); names from the bootstrap catalog
+    async listByDoctor(doctorId) {
+      if (!/^\d+$/.test(doctorId)) return [];
+      const [res, catalog] = await Promise.all([
+        js<S1CustomerRow[]>("api.crm.customers", "getData", { trdr: Number(doctorId) }),
+        softOneProvider.stats.machineCatalog(),
+      ]);
+      return (res.data?.[0]?.machines ?? []).map((m, i) => rowToEquipment(m, doctorId, i, catalog));
+    },
+    // write: setData CUSTOMER / _CRM_ / CCCTRDMACHINES, line deltas against what SoftOne has now
+    async replaceForDoctor(doctorId, rows) {
       const cid = await clientId();
-      const res = await s1.setData(cid, "SOMEETING", autopsyToSetData(a, autopsySeries(), equipmentSummary(a.equipment)));
-      return { ...a, id: String(res.id), s1Id: String(res.id) } as Autopsy;
+      const current = await softOneProvider.equipment.listByDoctor(doctorId);
+      const payload = machinesToSetData(rows, current);
+      if (payload) await s1.setData(cid, "CUSTOMER", payload, Number(doctorId), CRM_FORM);
+      return softOneProvider.equipment.listByDoctor(doctorId);
     },
   },
   visits: { listByDoctor: todo("visits.listByDoctor"), listByUser: todo("visits.listByUser"), listAll: todo("visits.listAll"), create: todo("visits.create") },
@@ -260,6 +281,17 @@ export const softOneProvider: DataProvider = {
     async listHospitals(term) {
       const res = await js<Array<{ ccchsptl: string | number; code?: string; name?: string; isActive?: string | number }>>("api.crm", "hospitals", term?.trim() ? { q: term.trim() } : {});
       return (res.data ?? []).filter((h) => String(h.isActive ?? "1") !== "0").map(rowToHospital);
+    },
+    // api.crm/bootstrap → machine: { categories, marks, models } (owner, 2026-11-11)
+    async machineCatalog() {
+      if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL) return catalogCache.data;
+      const res = (await js<never>("api.crm", "bootstrap", {})) as unknown as {
+        machine?: { categories?: S1MasterRow[]; marks?: S1MasterRow[]; models?: S1MasterRow[] };
+      };
+      const m = res.machine ?? {};
+      const data = { categories: toRefs(m.categories), marks: toRefs(m.marks), models: toRefs(m.models) };
+      catalogCache = { at: Date.now(), data };
+      return data;
     },
     async findProduct(code) {
       const res = await js<S1ProductRow[]>("api.crm.products", "list", { code, page: 1, pageSize: 5 });

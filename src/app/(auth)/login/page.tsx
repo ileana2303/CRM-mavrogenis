@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { PublicShell } from "@/components/app-shell";
 import { getSession, homeFor } from "@/server/auth/session";
-import { providerMode } from "@/server/data";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Σύνδεση" };
@@ -12,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session && !expired) redirect(homeFor(session.role));
   return (
     <PublicShell>
-      <LoginForm next={next} expired={!!expired} mode={providerMode()} />
+      <LoginForm next={next} expired={!!expired} />
     </PublicShell>
   );
 }

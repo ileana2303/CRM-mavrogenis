@@ -202,8 +202,11 @@ export function Select({
             onKeyDown={onKeyDown}
             style={{
               position: "fixed",
-              left: rect.left,
-              width: rect.width,
+              // never narrower than 260px (labels stay readable under narrow triggers), never past the viewport edge
+              ...(() => {
+                const w = Math.min(Math.max(rect.width, 260), window.innerWidth - 16);
+                return { left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w };
+              })(),
               ...(up
                 ? { bottom: window.innerHeight - rect.top + 6 }
                 : { top: rect.bottom + 6 }),
@@ -274,7 +277,8 @@ export function Select({
               })}
             </div>
           </div>,
-          document.body,
+          // inside a modal <dialog> everything outside it is inert → render the panel in the dialog
+          root.current?.closest("dialog") ?? document.body,
         )}
     </div>
   );

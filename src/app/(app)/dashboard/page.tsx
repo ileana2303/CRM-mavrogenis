@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, Empty, Notice, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { Select } from "@/components/select";
+import { DateRangeFields, FilterDialog } from "@/components/filter-dialog";
 import { fmtDate } from "@/lib/format";
 import { requireUser } from "@/server/auth/current-user";
 import type { DailyReportItem } from "@/server/domain/types";
@@ -20,31 +21,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const salespeople = session.role === "MANAGER" ? await listSalespeople() : [];
   const userId = session.role === "MANAGER" ? sp.user || salespeople[0]?.id || session.userId : session.userId;
   const report = await dailyReport(userId, range);
+  const salesperson = session.role === "MANAGER" ? salespeople.find((u) => u.id === userId)?.fullName : undefined;
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitle>{el.daily.title}</PageTitle>
-
-      <form className="card p-4 grid grid-cols-2 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end" method="get">
-        <p className="col-span-2 md:col-span-4 text-sm font-semibold text-[var(--muted)]">{el.daily.dateRange}</p>
-        <label className="block">
-          <span className="label">{el.daily.from}</span>
-          <input type="date" name="from" defaultValue={range.from} className="input" />
-        </label>
-        <label className="block">
-          <span className="label">{el.daily.to}</span>
-          <input type="date" name="to" defaultValue={range.to} className="input" />
-        </label>
-        {session.role === "MANAGER" ? (
-          <label className="block col-span-2 md:col-span-1">
-            <span className="label">{el.daily.salespersonFilter}</span>
-            <Select name="user" defaultValue={userId} options={salespeople.map((u) => ({ value: u.id, label: u.fullName }))} />
-          </label>
-        ) : (
-          <div className="hidden md:block" />
-        )}
-        <button className="btn-primary col-span-2 md:col-span-1">{el.daily.apply}</button>
-      </form>
+      <PageTitle
+        right={
+          <FilterDialog summary={[`${fmtDate(range.from)} – ${fmtDate(range.to)}`, salesperson].filter(Boolean).join(" · ")}>
+            <DateRangeFields from={range.from} to={range.to} />
+            {session.role === "MANAGER" && (
+              <label className="block">
+                <span className="label">{el.daily.salespersonFilter}</span>
+                <Select name="user" defaultValue={userId} options={salespeople.map((u) => ({ value: u.id, label: u.fullName }))} />
+              </label>
+            )}
+          </FilterDialog>
+        }
+      >
+        {el.daily.title}
+      </PageTitle>
 
       <div className="grid gap-4 md:grid-cols-2">
         {report.errors.length > 0 && (

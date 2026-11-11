@@ -130,6 +130,16 @@ export const Icon = {
       <circle cx="12" cy="9.5" r="2.5" />
     </I>
   ),
+  filter: (p: P) => (
+    <I {...p}>
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </I>
+  ),
+  x: (p: P) => (
+    <I {...p}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </I>
+  ),
 };
 
 export type IconName = keyof typeof Icon;

@@ -4,5 +4,6 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
-# local JSON store (demo data, mirrors of SoftOne writes, signatures) – never committed
-data/
+# old local JSON store at the repo root (may hold signatures) – never committed.
+# Anchored with "/" so it does NOT match src/server/data/.
+/data/

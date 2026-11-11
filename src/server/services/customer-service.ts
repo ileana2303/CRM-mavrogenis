@@ -54,6 +54,16 @@ export function listEquipment(doctorId: string) {
   return db().equipment.listByDoctor(doctorId);
 }
 
+/** Machine categories / marks / models (SoftOne api.crm/bootstrap). Never blocks the page: empty lists on failure. */
+export async function machineCatalog() {
+  try {
+    return await db().stats.machineCatalog();
+  } catch (e) {
+    console.error("machineCatalog", e);
+    return { categories: [], marks: [], models: [] };
+  }
+}
+
 export function saveEquipment(doctorId: string, rows: Omit<Equipment, "id" | "doctorId">[]) {
   return db().equipment.replaceForDoctor(
     doctorId,

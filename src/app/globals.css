@@ -130,6 +130,10 @@ body {
   .nav-item {
     @apply flex items-center gap-3 rounded-xl px-3 min-h-12 font-medium text-brand-800 transition-colors hover:bg-brand-50/80;
   }
+  /* sidebar label fades in as the rail opens, so the clipped text never flashes */
+  .nav-label {
+    animation: nav-label-in 220ms ease-out;
+  }
   .nav-item-active {
     @apply text-white bg-gradient-to-r from-brand-600 to-brand-500 shadow-[0_8px_20px_-10px_rgba(11,95,165,0.7)] hover:from-brand-600 hover:to-brand-500;
   }
@@ -160,5 +164,132 @@ body {
   }
   .kpi .value {
     @apply text-3xl font-bold tabular-nums text-brand-800;
+  }
+}
+
+@keyframes nav-label-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-label {
+    animation: none;
+  }
+}
+
+/* ---- date inputs ----
+   iOS Safari draws <input type=date> with an intrinsic min-width (overflows grid columns), centred text and no
+   icon; desktop Chrome adds its own indicator. Normalise: fill the column, left-aligned value, one calendar icon
+   on the right, and keep the native picker by stretching its (invisible) indicator over the icon. */
+input.input[type="date"],
+input.input[type="datetime-local"],
+input.input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-right: 2.75rem;
+  font-variant-numeric: tabular-nums;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235b6b85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 18px;
+}
+input.input[type="date"]::-webkit-date-and-time-value,
+input.input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+input.input[type="date"]::-webkit-calendar-picker-indicator,
+input.input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input.input[type="time"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 2.75rem;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ---- filter modal (src/components/filter-dialog.tsx) ----
+   animate the panel, not the <dialog>: a transform on the dialog would re-anchor the fixed Select panel.
+   Exit: the component sets data-closing, waits 200ms, then calls close(). */
+@keyframes dialog-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.01);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+.filter-dialog[open] > form {
+  animation: dialog-in 320ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.filter-dialog[open]::backdrop {
+  animation: backdrop-in 240ms ease-out;
+}
+.filter-dialog[data-closing] > form {
+  animation: dialog-out 200ms ease-in forwards;
+}
+.filter-dialog[data-closing]::backdrop {
+  animation: backdrop-out 200ms ease-in forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-dialog[open] > form,
+  .filter-dialog[open]::backdrop,
+  .filter-dialog[data-closing] > form,
+  .filter-dialog[data-closing]::backdrop {
+    animation: none;
+  }
+}
+
+/* ---- loading skeletons (src/components/skeleton.tsx) ---- */
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: rgba(148, 163, 184, 0.18);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+    }
   }
 }

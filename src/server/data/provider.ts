@@ -1,14 +1,12 @@
 /**
  * Data provider contract.
  * The UI never calls a provider directly; services (src/server/services) do.
- * Two implementations:
- *   - local/   : JSON files under ./data, seeded from the slides (development & demo)
- *   - softone/ : SoftOne web services (see docs/SOFTONE-SPEC.md)
+ * Implemented by softone/ (SoftOne web services, see docs/SOFTONE-SPEC.md) – the only data source.
  */
 import type {
-  Autopsy,
   CheckIn,
   Hospital,
+  MachineCatalog,
   Consent,
   Doctor,
   DoctorYearStat,
@@ -62,11 +60,6 @@ export interface EquipmentRepo {
   replaceForDoctor(doctorId: string, rows: NewEntity<Equipment>[]): Promise<Equipment[]>;
 }
 
-export interface AutopsiesRepo {
-  listByDoctor(doctorId: string): Promise<Autopsy[]>;
-  create(a: NewEntity<Autopsy>): Promise<Autopsy>;
-}
-
 export interface VisitsRepo {
   listByDoctor(doctorId: string): Promise<Visit[]>;
   listByUser(userId: string, range?: DateRange): Promise<Visit[]>;
@@ -118,6 +111,8 @@ export interface CheckInsRepo {
 export interface StatsRepo {
   listProducts(term?: string): Promise<Product[]>;
   listHospitals(term?: string): Promise<Hospital[]>;
+  /** machine categories / marks / models for the equipment editor */
+  machineCatalog(): Promise<MachineCatalog>;
   findProduct(code: string): Promise<Product | null>;
   doctorHistory(doctorId: string): Promise<DoctorYearStat[]>;
   target(userId: string, year: number, month: number): Promise<Target | null>;
@@ -129,7 +124,6 @@ export interface DataProvider {
   users: UsersRepo;
   doctors: DoctorsRepo;
   equipment: EquipmentRepo;
-  autopsies: AutopsiesRepo;
   visits: VisitsRepo;
   projects: ProjectsRepo;
   offers: OffersRepo;

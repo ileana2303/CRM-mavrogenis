@@ -86,31 +86,34 @@ export type EquipmentCategory =
 export interface Equipment {
   id: string;
   doctorId: string;
-  category: EquipmentCategory;
+  /** display name of the category (SoftOne machine category; legacy local rows hold an EquipmentCategory code) */
+  category: string;
   manufacturer: string;
   model: string;
+  /** SoftOne ids from api.crm/bootstrap → machine.{categories,marks,models} */
+  categoryId?: string;
+  markId?: string;
+  modelId?: string;
+  /** SoftOne detail LINENUM of the machine row (absent on new rows) */
+  lineNum?: number;
   purchaseYear: number | null;
   serviceContract: boolean;
   serialNumber?: string;
 }
 
-/**
- * Αυτοψία: the first visit at a customer, recording what equipment they already have.
- * SoftOne: SOMEETING series 2002 (COMMENTS = findings + equipment summary); the rows also
- * replace the customer's Εξοπλισμός list.
- */
-export interface Autopsy {
+/** One row of a machine master list (api.crm/bootstrap → machine.*). */
+export interface MachineRef {
   id: string;
-  doctorId: string;
-  userId: string;
-  userName?: string;
-  date: string; // YYYY-MM-DD
-  comments: string;
-  equipment: Omit<Equipment, "id" | "doctorId">[];
-  /** SoftOne SOACTION id / document code (FCC0000001) once stored there */
-  s1Id?: string;
-  code?: string;
-  createdAt: string;
+  code: string;
+  name: string;
+  /** models only: the mark (brand) they belong to, when SoftOne provides it */
+  markId?: string;
+}
+
+export interface MachineCatalog {
+  categories: MachineRef[];
+  marks: MachineRef[];
+  models: MachineRef[];
 }
 
 export type VisitContactMethod = "VISIT" | "PHONE" | "EMAIL";
@@ -272,7 +275,7 @@ export interface CheckIn {
   arriveLng?: number;
   departLat?: number;
   departLng?: number;
-  /** SoftOne SOACTION id (SOMEETING series 2002) when the arrival was sent to SoftOne */
+  /** SoftOne SOACTION id (SOMEETING series 2001) when the arrival was sent to SoftOne */
   s1Id?: string;
 }
 

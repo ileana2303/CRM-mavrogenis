@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BackLink, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/ui";
 import { CustomerSearch } from "@/components/customer-search";
 import { Icon } from "@/components/icons";
 import { el } from "@/lib/i18n/el";
@@ -10,7 +10,6 @@ export default async function CustomerSearchPage({ searchParams }: { searchParam
   const { q } = await searchParams;
   return (
     <div className="flex flex-col gap-4">
-      <BackLink href="/dashboard" />
       <PageTitle
         right={
           <Link href="/customers/new" className="btn-primary shrink-0">

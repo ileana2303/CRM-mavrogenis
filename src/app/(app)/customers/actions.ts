@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
-import type { ActivityType, DoctorRank, EquipmentCategory } from "@/server/domain/types";
+import type { ActivityType, DoctorRank } from "@/server/domain/types";
 import { createDoctor, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
-import { recordAutopsy } from "@/server/services/autopsy-service";
 import { arrive, depart } from "@/server/services/checkin-service";
 import { addTask, completeTask, reopenTask } from "@/server/services/task-service";
 import { setOfferClosed } from "@/server/services/offer-service";
@@ -74,6 +73,10 @@ const equipmentSchema = z.array(
     purchaseYear: z.union([z.number(), z.null()]),
     serviceContract: z.boolean(),
     serialNumber: z.string().optional(),
+    categoryId: z.string().optional(),
+    markId: z.string().optional(),
+    modelId: z.string().optional(),
+    lineNum: z.number().optional(),
   }),
 );
 
@@ -85,8 +88,7 @@ export async function saveEquipmentAction(fd: FormData) {
   await saveEquipment(
     doctorId,
     parsed.data
-      .filter((r) => r.manufacturer || r.model || r.category)
-      .map((r) => ({ ...r, category: r.category as EquipmentCategory })),
+      .filter((r) => r.manufacturer || r.model || r.category),
   );
   revalidatePath(`/customers/${doctorId}/equipment`);
   redirect(`/customers/${doctorId}?saved=equipment`);
@@ -98,37 +100,12 @@ export async function saveDoctorThenConsentAction(fd: FormData) {
   return saveDoctorAction(fd);
 }
 
-/** «Αποθήκευση & Νέο Project» on the autopsy form. */
-export async function saveAutopsyThenProjectAction(fd: FormData) {
-  fd.set("intent", "newProject");
-  return saveAutopsyAction(fd);
-}
-
 /** «+ Νέο Project» on the visit form. */
 export async function saveVisitThenProjectAction(fd: FormData) {
   fd.set("intent", "newProject");
   return saveVisitAction(fd);
 }
 
-export async function saveAutopsyAction(fd: FormData) {
-  const user = await requireUser();
-  const doctorId = str(fd, "doctorId");
-  const parsed = equipmentSchema.safeParse(JSON.parse(str(fd, "rows") || "[]"));
-  if (!parsed.success) redirect(`/customers/${doctorId}/autopsy/new?error=1`);
-  await recordAutopsy(
-    doctorId,
-    {
-      date: str(fd, "date"),
-      comments: str(fd, "comments"),
-      equipment: parsed.data.map((r) => ({ ...r, category: r.category as EquipmentCategory })),
-    },
-    user,
-  );
-  revalidatePath(`/customers/${doctorId}`);
-  revalidatePath(`/customers/${doctorId}/equipment`);
-  if (str(fd, "intent") === "newProject") redirect(`/customers/${doctorId}/projects/new`);
-  redirect(`/customers/${doctorId}?saved=autopsy`);
-}
 
 export async function saveVisitAction(fd: FormData) {
   const user = await requireUser();

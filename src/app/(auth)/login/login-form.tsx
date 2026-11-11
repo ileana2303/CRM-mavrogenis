@@ -5,7 +5,7 @@ import { el } from "@/lib/i18n/el";
 import { Field, Notice } from "@/components/ui";
 import { loginAction, type LoginState } from "./actions";
 
-export function LoginForm({ next, expired, mode }: { next?: string; expired?: boolean; mode: "local" | "hybrid" | "softone" }) {
+export function LoginForm({ next, expired }: { next?: string; expired?: boolean }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const message = state.error === "invalid" ? el.login.error : state.error === "no_role" ? el.login.noRole : state.error === "unavailable" ? el.login.unavailable : null;
   return (
@@ -14,7 +14,7 @@ export function LoginForm({ next, expired, mode }: { next?: string; expired?: bo
       {next && <input type="hidden" name="next" value={next} />}
       {expired && <Notice tone="amber">{el.login.expired}</Notice>}
       <Field label={el.login.username}>
-        <input name="username" className="input" autoComplete="username" autoCapitalize="none" required placeholder={mode === "local" ? "e.leventouris" : "SoftOne username"} />
+        <input name="username" className="input" autoComplete="username" autoCapitalize="none" required placeholder="SoftOne username" />
       </Field>
       <Field label={el.login.password}>
         <input name="password" type="password" className="input" autoComplete="current-password" required placeholder="••••••••" />
@@ -28,7 +28,7 @@ export function LoginForm({ next, expired, mode }: { next?: string; expired?: bo
       <button className="btn-primary w-full" disabled={pending}>
         {pending ? el.app.loading : el.login.submit}
       </button>
-      <p className="text-xs text-[var(--muted)] text-center">{mode === "local" ? el.login.hint : el.login.hintSoftOne}</p>
+      <p className="text-xs text-[var(--muted)] text-center">{el.login.hintSoftOne}</p>
     </form>
   );
 }

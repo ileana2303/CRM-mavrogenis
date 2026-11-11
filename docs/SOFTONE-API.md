@@ -20,7 +20,7 @@ Auth is the standard `login` (`appid: 1306`) + `authenticate` (`COMPANY 1001, BR
 Writes to standard objects (CUSTOMER, SALDOC) therefore go through `setData` directly from the CRM; JS functions are for reads and custom tables.
 
 Already existing ✔: `api.crm/me`, `api.crm/bootstrap`, `api.crm.customers/list`, `api.crm.customers/getData`.
-The CRM runs today in **hybrid** mode (`DATA_PROVIDER=hybrid`): SoftOne for login/users/customers, local JSON for the rest.
+The CRM uses SoftOne as its **only** data source; any repo method without an endpoint yet throws `NotImplemented`.
 Everything else below is to be created, in the order of section 11.
 
 ---
@@ -60,30 +60,6 @@ Read ✔: `api.crm.customers/getData` returns `signatures: [{ name: "SIGNATURE_<
 | fn | params | row |
 |---|---|---|
 | `hospitals` ✔ | `q?` | `{ ccchsptl, code, name, isActive, guid }` — written to doctors via the CCCTRDHSPTL detail of CUSTOMER (form `_CRM_`) |
-
-## 4a. Αυτοψία ✔ — `SOMEETING` series **2002** («Αυτοψία», codes FCC0000001…) — verified 2026-11-10
-
-The first visit at a customer: what equipment they already have. Flow in the CRM: hub tile «Αυτοψία» → list → «+ Νέα Αυτοψία»
-(date, equipment rows, findings with dictation) → save. Saving also replaces the customer's «Εξοπλισμός Πελάτη» rows.
-
-**Write (works today, standard setData, no form):**
-```json
-{ "service": "setData", "clientID": "…", "appid": 1306, "object": "SOMEETING",
-  "data": { "SOACTION": [ { "SERIES": 2002, "TRDR": 34584, "TRNDATE": "2026-11-10",
-            "COMMENTS": "<findings>\n\n• OCT – Topcon Maestro 2 (2019)\n• Περίμετρο – Zeiss Humphrey 740i" } ] } }
-```
-Verified: ACTOR / ORDEREDBY / ACTPRSN are filled by SoftOne from the logged-in user (REFID 266 → PRSN 59), ACTSTATUS = 1 «Προς έναρξη»,
-FROMDATE = creation time, SOACTIONCODE = FCC000000n. Test record 9169 created and deleted with `delData`.
-
-**Read (needed from you):** `api.crm.actions/list` with `object: "SOMEETING"`, `series: 2002`, `trdr` → rows
-`{ soaction, soactioncode, series, trndate, trdr, actor, actprsn, comments, actstatus, insdate }`. Until it exists, hybrid mode writes to
-SoftOne and keeps a local mirror of the list (`data/autopsies.json`, with `s1Id`).
-
-**Open questions (your call):**
-1. Equipment rows: today they go only into COMMENTS as text. SOMEETING has an `ACTLINES` detail (MSODTYPE 51 = items). Should the rows go to
-   `ACTLINES` (how, when the machine is a competitor's and not an MTRL?), to a custom table `CCCCRMEQUIP` (spec §2.1, with SOACTION + TRDR), or stay as text?
-2. Should the CRM set `ACTSTATUS` to «completed» on save (the autopsy is done on the spot)? Give me the status code.
-3. Keep `TRNDATE` = the date the salesperson picks (default today)? `FROMDATE` stays the creation time.
 
 ## 4–6. Activities — DECIDED 2026-11-10: they live in **SOACTION** (objects SOMEETING, SOCALL, SOEMAIL, SOTASK, SOACTION)
 
@@ -138,7 +114,7 @@ CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
 2. Add to the row: `dueDate` (προθεσμία → overdue logic), `trdr`, `actPrsn`, `soActionCode`, `trnDate`. Without `dueDate` every item shows as due "today".
 3. Later: a project link (`CCCPROJECT`) once projects have a home.
 
-## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10; 2002 stays Αυτοψία)
+## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
 | step | call |
 |---|---|
@@ -147,8 +123,7 @@ CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
 | open arrival | `api.crm.actions/getPendingArrivals` `{ trdr, prsn }` → arrivals without FINALDATE. **Currently broken:** `ScriptError: 'body' is undefined [Line: 23 Ofs: 2]` (the function does not read the request body the way the other scripts do). Expected row: `{ soaction, trdr, actprsn, fromdate, finaldate, soactioncode }` — any column casing is accepted |
 | manager log (`/manager/check-ins`) | no endpoint yet → local mirror `data/check_ins.json` (also keeps lat/lng, which have no SoftOne field) |
 
-Times are Greek local time (Europe/Athens). ACTSTATUS is left at 1. Open point: the Αυτοψία (§4a) also creates a SOMEETING 2002 —
-should it instead write its COMMENTS/equipment into the open arrival record of the same visit?
+Times are Greek local time (Europe/Athens). ACTSTATUS is left at 1.
 
 ## 10. `api.crm.stats` — SoftOne-native figures
 | fn | params | row |

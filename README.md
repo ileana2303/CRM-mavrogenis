@@ -51,16 +51,15 @@ src/
     domain/types.ts          the data model (mirrors docs/SOFTONE-SPEC.md)
     data/provider.ts         DataProvider interface (repos: users, doctors, equipment, visits,
                              projects, offers, tasks, checkIns, stats)
-    data/local/              JSON-file store under ./data + seed.ts (slides' demo data)
-    data/softone/            SoftOne adapter: client.ts (s1services) + provider.ts (stubs to fill)
+    data/softone/            SoftOne adapter (the only data source): client.ts (s1services),
+                             mappers.ts, provider.ts (unbuilt repos throw NotImplemented)
     services/                use-cases; the ONLY layer the UI talks to
     auth/                    session cookie, role guards
   middleware.ts              auth redirect + role gating (/manager, /support)
 ```
 
-Switch the data source with `DATA_PROVIDER=local|hybrid|softone` in `.env.local`
-(`SESSION_SECRET` is required; see `.env.example`). `hybrid` = SoftOne for everything that has an
-endpoint, local JSON for the rest – this is the mode used during the SoftOne roll-out.
+SoftOne is the only data source – there is no local/demo store. Configure it in `.env.local`
+(`SESSION_SECRET` and the `S1_*` values; see `.env.example`).
 
 ### Connecting SoftOne
 
@@ -75,7 +74,6 @@ The contract and what is still missing is in [`docs/SOFTONE-API.md`](docs/SOFTON
 | customers (search `q`, read, create, update, hospitals) | `api.crm.customers/list`, `/getData`; `setData CUSTOMER` form `_CRM_` |
 | Συγκατάθεση (signature) | `api.crm.customers/setSignature`; read from `signatures[]` of `getData` |
 | Άφιξη / Αναχώρηση | `SOMEETING` series `S1_ARRIVAL_SERIES` (2001): FROMDATE / FINALDATE; `api.crm.actions/getPendingArrivals` |
-| Αυτοψία | `SOMEETING` series `S1_AUTOPSY_SERIES` (2002) |
 | Εκκρεμότητες | `SOTASK` series `S1_TASK_SERIES` (3000): COMMENTS, DUEDATE, ACTSTATUS; `api.crm.actions/getPendings` |
 | products, offers (read) | `api.crm.products`, `api.crm.offers` (write series `S1_OFFER_SERIES` 7015) |
 

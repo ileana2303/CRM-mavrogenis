@@ -293,8 +293,3 @@ and `CCCCRMROLE` set. MODULE/REFID: I take them from the `login` response (`objs
 
 5.5 **Service module (next version)**: nothing needed now. The CRM shows a «Service — Σύντομα διαθέσιμο» tile. When you are ready, `CCCCRMEQUIP.SERIALNUM` is the join key to the service-ticket objects from `NEW EBS V2.xlsx`.
 
-
-## Αυτοψία (added 2026-11-10)
-Lives in **SOMEETING series 2002** (see SOFTONE-API.md §4a). The CRM writes the header with standard `setData`
-(SERIES, TRDR, TRNDATE, COMMENTS); the equipment rows captured during the autopsy replace the customer's equipment list
-(storage of those rows in SoftOne still to be decided: ACTLINES vs CCCCRMEQUIP vs text in COMMENTS).

@@ -38,13 +38,15 @@ export function NavLinks({ role, variant, compact = false }: { role: Role; varia
           const active = it.match(pathname);
           const Ic = Icon[it.icon];
           return compact ? (
-            <Link key={it.label} href={it.href} title={it.label} aria-label={it.label} className={`nav-item justify-center w-14 h-14 px-0 mx-auto ${active ? "nav-item-active" : ""}`}>
-              <Ic size={24} />
+            // same 48px row height and 22px icon as the expanded state → icons never move vertically on toggle
+            <Link key={it.label} href={it.href} title={it.label} aria-label={it.label} className={`nav-item justify-center w-12 h-12 min-h-12 px-0 mx-auto ${active ? "nav-item-active" : ""}`}>
+              <Ic size={22} className="shrink-0" />
             </Link>
           ) : (
-            <Link key={it.label} href={it.href} className={`nav-item ${active ? "nav-item-active" : ""}`}>
-              <Ic size={22} />
-              <span>{it.label}</span>
+            // one line always: while the rail widens (88→240px) the label is clipped, never wrapped
+            <Link key={it.label} href={it.href} className={`nav-item h-12 overflow-hidden ${active ? "nav-item-active" : ""}`}>
+              <Ic size={22} className="shrink-0" />
+              <span className="nav-label whitespace-nowrap">{it.label}</span>
             </Link>
           );
         })}

@@ -163,7 +163,7 @@ export function CustomerSearch({ initialQ = "" }: { initialQ?: string }) {
                 </p>
                 {d.afm && <p className="text-xs text-[var(--muted)]">ΑΦΜ {d.afm}</p>}
               </div>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-auto pt-1">
                 <Link href={`/customers/${d.id}`} className="btn-primary flex-1">
                   {el.app.open}
                 </Link>

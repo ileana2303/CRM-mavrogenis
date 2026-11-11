@@ -11,8 +11,6 @@ import { doctorFullName, getConsent, getDoctor } from "@/server/services/custome
 import { openCheckIn } from "@/server/services/checkin-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { listProjects } from "@/server/services/project-service";
-import { lastAutopsy } from "@/server/services/autopsy-service";
-import { fmtDate } from "@/lib/format";
 
 export const metadata = { title: el.hub.title };
 
@@ -20,28 +18,21 @@ export default async function HubPage({ params, searchParams }: { params: Promis
   const session = await requireUser();
   const { id } = await params;
   const { saved } = await searchParams;
-  // «Πίσω» is history-back; this href only matters on a cold deep link, then it reopens the last search
+  // «Πίσω» goes up to the customer list, reopening the last search (cookie) when there is one
   const lastQ = (await cookies()).get(LAST_SEARCH_COOKIE)?.value ?? "";
   const backHref = lastQ ? `/customers?q=${encodeURIComponent(lastQ)}` : "/customers";
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
-  const [consent, openRes, pending, projects, autopsy] = await Promise.all([
+  const [consent, openRes, pending, projects] = await Promise.all([
     getConsent(id),
     openCheckIn(id, session).then((r) => ({ open: r, error: null as string | null }), (e: unknown) => ({ open: null, error: e instanceof Error ? e.message : String(e) })),
     pendingForDoctor(id),
     listProjects(id),
-    lastAutopsy(id),
   ]);
   const open = openRes.open;
   const active = projects.filter((p) => p.status === "ACTIVE").length;
 
   const tiles: Array<{ href: string; label: string; icon: IconName; meta?: React.ReactNode }> = [
-    {
-      href: `/customers/${id}/autopsy`,
-      label: el.hub.autopsy,
-      icon: "clipboard",
-      meta: autopsy ? <Badge tone="green">{fmtDate(autopsy.date)}</Badge> : <Badge tone="amber">{el.hub.autopsyNone}</Badge>,
-    },
     { href: `/customers/${id}/equipment`, label: el.hub.equipment, icon: "stethoscope" },
     { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "pen" },
     { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null },

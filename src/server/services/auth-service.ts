@@ -1,20 +1,10 @@
-import bcrypt from "bcryptjs";
-import { db, providerMode } from "../data";
+import { db } from "../data";
 import { s1 } from "../data/softone/provider";
 import { S1Error } from "../data/softone/client";
 import type { Session } from "../auth/jwt";
 import type { Role } from "../domain/types";
 
 export type LoginResult = { ok: true; session: Session } | { ok: false; reason: "invalid" | "no_role" | "unavailable"; detail?: string };
-
-/** Local store: bcrypt users from the seed. */
-async function authenticateLocal(username: string, password: string): Promise<LoginResult> {
-  const user = await db().users.findByUsername(username.trim());
-  if (!user) return { ok: false, reason: "invalid" };
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return { ok: false, reason: "invalid" };
-  return { ok: true, session: { userId: user.id, username: user.username, fullName: user.fullName, role: user.role } };
-}
 
 /** What api.crm/me is expected to return (docs/SOFTONE-API.md §1). Parsed defensively. */
 interface MeRow {
@@ -77,7 +67,7 @@ async function authenticateSoftOne(username: string, password: string): Promise<
 }
 
 export function authenticate(username: string, password: string): Promise<LoginResult> {
-  return providerMode() === "local" ? authenticateLocal(username, password) : authenticateSoftOne(username, password);
+  return authenticateSoftOne(username, password);
 }
 
 export async function listSalespeople() {
