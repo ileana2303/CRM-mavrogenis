@@ -433,6 +433,8 @@ export interface S1MachineRow {
   SoYear?: number | string;
   srvContr?: number | string;
   SNCode?: string;
+  /** machine price (€), owner 2026-11-14 */
+  price?: number | string | null;
   linenum?: number | string;
 }
 
@@ -446,6 +448,7 @@ export function rowToEquipment(r: S1MachineRow, doctorId: string, i: number, c: 
   const modelId = idOf(r.cccMtrModel);
   const name = (list: MachineCatalog["marks"], id?: string) => (id ? (list.find((x) => x.id === id)?.name ?? `#${id}`) : "");
   const year = Number(r.SoYear);
+  const price = r.price === undefined || r.price === null || r.price === "" ? null : Number(r.price);
   return {
     id: `${doctorId}-${idOf(r.linenum) ?? i + 1}`,
     doctorId,
@@ -457,6 +460,7 @@ export function rowToEquipment(r: S1MachineRow, doctorId: string, i: number, c: 
     model: name(c.models, modelId),
     purchaseYear: Number.isFinite(year) && year > 0 ? year : null,
     serviceContract: String(r.srvContr ?? "0") === "1",
+    price: price !== null && Number.isFinite(price) ? price : null,
     ...(r.SNCode ? { serialNumber: r.SNCode } : {}),
     ...(Number.isFinite(line) && line > 0 ? { lineNum: line } : {}),
   };
@@ -477,6 +481,7 @@ function machineFields(r: MachineInput): Record<string, unknown> {
     SoYear: r.purchaseYear ?? null,
     srvContr: r.serviceContract ? 1 : 0,
     SNCode: r.serialNumber?.trim() ?? "",
+    price: r.price ?? null,
   };
   // only SoftOne-known ids are sent; a legacy name without id cannot be written
   if (r.categoryId) f.cccMtrCatgeory = Number(r.categoryId);

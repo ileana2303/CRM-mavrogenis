@@ -73,6 +73,7 @@ const equipmentSchema = z.array(
     purchaseYear: z.union([z.number(), z.null()]),
     serviceContract: z.boolean(),
     serialNumber: z.string().optional(),
+    price: z.union([z.number().nonnegative(), z.null()]).optional(),
     categoryId: z.string().optional(),
     markId: z.string().optional(),
     modelId: z.string().optional(),

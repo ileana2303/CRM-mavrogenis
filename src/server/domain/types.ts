@@ -99,6 +99,8 @@ export interface Equipment {
   purchaseYear: number | null;
   serviceContract: boolean;
   serialNumber?: string;
+  /** machine price (€) – CCCTRDMACHINES `price`; null when not set */
+  price?: number | null;
 }
 
 /** One row of a machine master list (api.crm/bootstrap → machine.*). */

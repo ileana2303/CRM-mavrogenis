@@ -167,6 +167,7 @@ export const el = {
     purchaseYear: "Έτος Αγοράς",
     serviceContract: "Συμβόλαιο Service",
     serialNumber: "Σειριακός αριθμός",
+    price: "Τιμή",
     empty: "Δεν έχει καταχωρηθεί εξοπλισμός.",
     emptyHint: "Προσθέστε τα μηχανήματα που διαθέτει ο πελάτης.",
     addMachine: "Προσθήκη μηχανήματος",

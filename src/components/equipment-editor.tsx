@@ -5,11 +5,12 @@ import { el } from "@/lib/i18n/el";
 import { categoryLabel } from "@/lib/equipment-summary";
 import { Icon } from "@/components/icons";
 import { Select, type SelectOption } from "@/components/select";
+import { fmtEur } from "@/lib/format";
 import type { Equipment, MachineCatalog, MachineRef } from "@/server/domain/types";
 
 export type EquipmentRow = Omit<Equipment, "id" | "doctorId">;
 
-const blank = (): EquipmentRow => ({ category: "", manufacturer: "", model: "", purchaseYear: null, serviceContract: false, serialNumber: "" });
+const blank = (): EquipmentRow => ({ category: "", manufacturer: "", model: "", purchaseYear: null, serviceContract: false, serialNumber: "", price: null });
 const years = Array.from({ length: 31 }, (_, i) => new Date().getFullYear() - i);
 
 /** Values not found in the SoftOne lists are kept as "~name" options so nothing typed earlier is lost. */
@@ -113,7 +114,7 @@ function MachineCard({
         <div className="flex-1 min-w-0 pt-0.5">
           <div className="font-semibold truncate">{title || el.equipment.newMachine}</div>
           <div className="text-xs text-[var(--muted)] truncate">
-            {[cat, r.purchaseYear ? String(r.purchaseYear) : "", r.serviceContract ? `${el.equipment.serviceContract} ✓` : ""].filter(Boolean).join(" · ") || "—"}
+            {[cat, r.purchaseYear ? String(r.purchaseYear) : "", r.price != null ? fmtEur(r.price, true) : "", r.serviceContract ? `${el.equipment.serviceContract} ✓` : ""].filter(Boolean).join(" · ") || "—"}
           </div>
         </div>
         <button
@@ -129,8 +130,8 @@ function MachineCard({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Labeled label={el.equipment.category}>
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <Labeled label={el.equipment.category} span="sm:col-span-4">
           <Select
             value={r.categoryId ?? (r.category ? LEGACY + r.category : "")}
             onChange={(v) => {
@@ -143,7 +144,7 @@ function MachineCard({
             ariaLabel={el.equipment.category}
           />
         </Labeled>
-        <Labeled label={el.equipment.manufacturer}>
+        <Labeled label={el.equipment.manufacturer} span="sm:col-span-4">
           <Select
             value={r.markId ?? (r.manufacturer ? LEGACY + r.manufacturer : "")}
             onChange={(v) => {
@@ -159,7 +160,7 @@ function MachineCard({
             ariaLabel={el.equipment.manufacturer}
           />
         </Labeled>
-        <Labeled label={el.equipment.model}>
+        <Labeled label={el.equipment.model} span="sm:col-span-4">
           <Select
             value={r.modelId ?? (r.model ? LEGACY + r.model : "")}
             onChange={(v) => {
@@ -174,7 +175,7 @@ function MachineCard({
             ariaLabel={el.equipment.model}
           />
         </Labeled>
-        <Labeled label={el.equipment.purchaseYear}>
+        <Labeled label={el.equipment.purchaseYear} span="sm:col-span-3">
           <Select
             value={r.purchaseYear ?? ""}
             onChange={(v) => onChange({ purchaseYear: v ? Number(v) : null })}
@@ -182,10 +183,13 @@ function MachineCard({
             ariaLabel={el.equipment.purchaseYear}
           />
         </Labeled>
-        <Labeled label={el.equipment.serialNumber}>
+        <Labeled label={el.equipment.serialNumber} span="sm:col-span-3">
           <input className="input" value={r.serialNumber ?? ""} onChange={(e) => onChange({ serialNumber: e.target.value })} placeholder="S/N" autoComplete="off" />
         </Labeled>
-        <Labeled label={el.equipment.serviceContract}>
+        <Labeled label={el.equipment.price} span="sm:col-span-3">
+          <PriceInput value={r.price ?? null} onChange={(price) => onChange({ price })} />
+        </Labeled>
+        <Labeled label={el.equipment.serviceContract} span="sm:col-span-3">
           <Segmented value={r.serviceContract} onChange={(v) => onChange({ serviceContract: v })} />
         </Labeled>
       </div>
@@ -193,11 +197,43 @@ function MachineCard({
   );
 }
 
-function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+function Labeled({ label, span = "", children }: { label: string; span?: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${span}`}>
       <span className="label">{label}</span>
       {children}
+    </div>
+  );
+}
+
+/** "1.500,50" / "1500,5" / "1500.50" / "1.500" → number. A comma is always the decimal mark; a lone dot is
+ *  decimal only when 1–2 digits follow it, otherwise dots are thousands separators. */
+function parsePrice(t: string): number {
+  if (t.includes(",")) return Number(t.replace(/\./g, "").replace(",", "."));
+  if (/^\d*\.\d{1,2}$/.test(t)) return Number(t);
+  return Number(t.replace(/\./g, ""));
+}
+
+/** € amount; empty = no price (null). */
+function PriceInput({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const [text, setText] = useState(value === null ? "" : String(value).replace(".", ","));
+  return (
+    <div className="relative">
+      <input
+        className="input pr-8 tabular-nums"
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder="0,00"
+        aria-label={el.equipment.price}
+        value={text}
+        onChange={(e) => {
+          const t = e.target.value.replace(/[^\d.,]/g, "");
+          setText(t);
+          const n = parsePrice(t);
+          onChange(t.trim() === "" || !Number.isFinite(n) ? null : Math.round(n * 100) / 100);
+        }}
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--muted)]">€</span>
     </div>
   );
 }

@@ -212,7 +212,7 @@ export function SearchSkeleton() {
   );
 }
 
-/** Equipment: machine cards with a 3-column field grid + add button. */
+/** Equipment: machine cards with a 3 + 4 field grid + add button. */
 export function EquipmentSkeleton() {
   return (
     <Page>
@@ -227,9 +227,11 @@ export function EquipmentSkeleton() {
             </div>
             <Bone className="size-10 rounded-xl" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {range(6).map((j) => (
-              <FieldBone key={j} />
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            {range(7).map((j) => (
+              <div key={j} className={j < 3 ? "sm:col-span-4" : "sm:col-span-3"}>
+                <FieldBone />
+              </div>
             ))}
           </div>
         </CardBone>
