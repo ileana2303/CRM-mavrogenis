@@ -5,8 +5,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
 import type { FollowUpContactMethod, FollowUpResult, NextAction, ProjectType } from "@/server/domain/types";
-import { addFollowUp, closeProject, createProject, getProject, requestOffer, reviseOffer } from "@/server/services/project-service";
+import { addFollowUp, closeProject, createProject, createProjectForDoctor, getProject, requestOffer, reviseOffer } from "@/server/services/project-service";
 import { getOffer, markOfferSent } from "@/server/services/offer-service";
+import type { ActionResult } from "@/components/action-form";
+import { el } from "@/lib/i18n/el";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const num = (v: unknown) => {
@@ -133,4 +135,26 @@ export async function markOfferSentAction(fd: FormData) {
 export async function createProjectRequestOfferAction(fd: FormData) {
   fd.set("intent", "requestOffer");
   return createProjectAction(fd);
+}
+
+/**
+ * «Νέο Project» → setData PRJC (form _CRM_); back to the doctor's project list. A refusal (missing field, SoftOne error)
+ * comes back as `{ error }` so the form keeps what was typed (ActionForm shows it as an alert).
+ */
+export async function createS1ProjectAction(fd: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const title = str(fd, "title");
+  const categoryId = str(fd, "categoryId");
+  const stateId = str(fd, "stateId");
+  if (!title || !categoryId || !stateId) return { error: el.projects.requiredError };
+  try {
+    await createProjectForDoctor({ doctorId, title, categoryId, stateId, notes: str(fd, "notes") }, user);
+  } catch (e) {
+    console.error("[projects] create failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  revalidatePath(`/customers/${doctorId}`);
+  revalidatePath(`/customers/${doctorId}/projects`);
+  redirect(`/customers/${doctorId}/projects?saved=1`);
 }

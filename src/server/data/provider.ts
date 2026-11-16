@@ -18,6 +18,8 @@ import type {
   Project,
   ProjectEvent,
   ProjectSummary,
+  NewS1Project,
+  ProjectLookups,
   SalesTurnover,
   Target,
   Task,
@@ -73,6 +75,8 @@ export interface ProjectsRepo {
   listByDoctor(doctorId: string): Promise<Project[]>;
   /** api.crm.customers/projects {trdr} – the doctor's PRJC rows */
   summariesByDoctor(doctorId: string): Promise<ProjectSummary[]>;
+  /** setData PRJC (form _CRM_) → the new PRJC id */
+  createForDoctor(p: NewS1Project, salesmanId?: string): Promise<{ id: string }>;
   listByUser(userId: string): Promise<Project[]>;
   listAll(): Promise<Project[]>;
   findById(id: string): Promise<Project | null>;
@@ -117,6 +121,7 @@ export interface StatsRepo {
   listHospitals(term?: string): Promise<Hospital[]>;
   /** machine categories / marks / models for the equipment editor */
   machineCatalog(): Promise<MachineCatalog>;
+  projectLookups(): Promise<ProjectLookups>;
   findProduct(code: string): Promise<Product | null>;
   doctorHistory(doctorId: string): Promise<DoctorYearStat[]>;
   target(userId: string, year: number, month: number): Promise<Target | null>;

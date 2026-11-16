@@ -2,6 +2,7 @@ import { db } from "../data";
 import type { Session } from "../auth/jwt";
 import type {
   FollowUp,
+  NewS1Project,
   Offer,
   OfferLine,
   Project,
@@ -46,6 +47,17 @@ function toProjectLines(lines: LineInput[]): ProjectLine[] {
 
 export function listProjects(doctorId: string) {
   return db().projects.listByDoctor(doctorId);
+}
+
+/** «Νέο Project»: a PRJC for the doctor, owned by the logged-in salesperson. */
+export function createProjectForDoctor(input: NewS1Project, user: Session) {
+  // SALESMAN = the session's PRSN (owner, 2026-11-16) – never saved without an owner
+  if (!user.s1Prsn) throw new Error("Η σύνδεση δεν έχει PRSN πωλητή· αποσυνδεθείτε και συνδεθείτε ξανά.");
+  return db().projects.createForDoctor(input, user.s1Prsn);
+}
+
+export function projectLookups() {
+  return db().stats.projectLookups();
 }
 
 /** The doctor's projects as SoftOne lists them (code, title, active) – what the project list shows today. */

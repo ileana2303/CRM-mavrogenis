@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -67,14 +67,15 @@ async function customerById(id: string): Promise<Doctor | null> {
 
 /** api.crm/bootstrap master row: { id, code, name, isActive, mark? } */
 type S1MasterRow = { id: string | number; code?: string; name?: string; isActive?: string | number; mark?: string | number; markId?: string | number };
-const toRefs = (rows: S1MasterRow[] | undefined): MachineRef[] =>
+/** selectable rows as refs; sorted by name unless `keepOrder` (a pipeline like prjState keeps SoftOne's order) */
+const toRefs = (rows: S1MasterRow[] | undefined, keepOrder = false): MachineRef[] =>
   (rows ?? [])
     .filter((r) => String(r.isActive ?? "1") !== "0")
     .map((r) => {
       const mark = r.markId ?? r.mark;
       return { id: String(r.id), code: String(r.code ?? r.id), name: r.name ?? "", ...(mark !== undefined && mark !== null && mark !== "" ? { markId: String(mark) } : {}) };
     })
-    .sort((a, b) => a.name.localeCompare(b.name, "el"));
+    .sort((a, b) => (keepOrder ? 0 : a.name.localeCompare(b.name, "el")));
 
 // master data is the same for every user → short in-memory cache
 // api.crm/bootstrap: the master lists (machine catalog, project states / categories, …), cached 5 min
@@ -209,6 +210,12 @@ export const softOneProvider: DataProvider = {
     listByDoctor: todo("projects.listByDoctor"),
     // api.crm.customers/projects {trdr, page, pageSize} → { totalCount, data: [{ prjc, code, name, isActive, prjState, prjCategory, insDate, updDate }] }
     // prjState / prjCategory = ids into api.crm/bootstrap prjc.{prjState, prjCategory} (owner, 2026-11-16)
+    async createForDoctor(p, salesmanId) {
+      const cid = await clientId();
+      const res = await s1.setData(cid, "PRJC", projectToSetData(p, salesmanId), undefined, CRM_FORM);
+      if (!res.id) throw new S1Error("setData PRJC returned no id");
+      return { id: String(res.id) };
+    },
     async summariesByDoctor(doctorId) {
       const prjc = (await bootstrap()).prjc ?? {};
       const lookups = { states: nameById(prjc.prjState), categories: nameById(prjc.prjCategory) };
@@ -324,6 +331,11 @@ export const softOneProvider: DataProvider = {
     async machineCatalog() {
       const m = (await bootstrap()).machine ?? {};
       return { categories: toRefs(m.categories), marks: toRefs(m.marks), models: toRefs(m.models) };
+    },
+    // selectable (isActive = selectable in SoftOne) project states / categories for the «Νέο Project» form
+    async projectLookups() {
+      const prjc = (await bootstrap()).prjc ?? {};
+      return { states: toRefs(prjc.prjState, true), categories: toRefs(prjc.prjCategory, true) };
     },
     async findProduct(code) {
       const res = await js<S1ProductRow[]>("api.crm.products", "list", { code, page: 1, pageSize: 5 });

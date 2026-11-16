@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, BackLink, DoctorLine, Empty, PageTitle } from "@/components/ui";
+import { Badge, BackLink, DoctorLine, Empty, Notice, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
@@ -14,8 +14,15 @@ export const metadata = { title: el.projects.title };
  * A doctor's projects from api.crm.customers/projects (code, title, type, stage, active, dates). Value / offer date and the
  * project screens behind a row come once SoftOne returns them (SOON.projects); until then rows don't open.
  */
-export default async function ProjectsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
+}) {
   const { id } = await params;
+  const { saved } = await searchParams;
   if (SOON.projectList) return <ComingSoon title={metadata.title} backHref={`/customers/${id}`} />;
   const [doctor, projects] = await Promise.all([getDoctor(id), listProjectSummaries(id)]);
   if (!doctor) notFound();
@@ -29,7 +36,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ id: s
       <BackLink href={`/customers/${id}`} />
       <PageTitle
         right={
-          SOON.projects ? null : (
+          SOON.projectCreate ? null : (
             <Link href={`/customers/${id}/projects/new`} className="btn-primary">
               {el.projects.newProject}
             </Link>
@@ -39,6 +46,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ id: s
         {el.projects.title}
       </PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
+      {saved && <Notice tone="green">{el.projects.created}</Notice>}
 
       {projects.length === 0 ? (
         <div className="card">

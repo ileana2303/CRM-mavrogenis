@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -211,6 +211,29 @@ export function rowToProjectSummary(
     category: lookup(r.prjCategory, lookups.categories, "prjCategory", String(r.prjc)),
     createdAt: s1Date(r.insDate),
     updatedAt: s1Date(r.updDate) || s1Date(r.insDate),
+  };
+}
+
+/**
+ * New project → setData PRJC, form _CRM_. Always CODE "0*" (SoftOne numbers it; plain "*" is refused) and PRJCRM 2 (owner, 2026-11-16);
+ * SALESMAN = the session PRSN (owner, 2026-11-16).
+ * ORDER MATTERS: SoftOne applies the fields in the order sent, and PRJCRM must come right after CODE – set later,
+ * it resets PRJCATEGORY / PRJSTATE (they were silently dropped).
+ */
+export function projectToSetData(p: NewS1Project, salesmanId?: string): Record<string, Array<Record<string, unknown>>> {
+  return {
+    PRJC: [
+      {
+        CODE: "0*",
+        PRJCRM: 2,
+        NAME: p.title,
+        TRDR: Number(p.doctorId),
+        PRJCATEGORY: Number(p.categoryId),
+        PRJSTATE: Number(p.stateId),
+        ...(p.notes ? { REMARKS: p.notes } : {}),
+        ...(salesmanId ? { SALESMAN: Number(salesmanId) } : {}),
+      },
+    ],
   };
 }
 

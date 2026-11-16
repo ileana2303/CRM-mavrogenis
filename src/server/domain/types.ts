@@ -195,6 +195,23 @@ export interface ProjectSummary {
   updatedAt: string;
 }
 
+/** «Νέο Project» → setData PRJC form _CRM_ (owner, 2026-11-16) */
+export interface NewS1Project {
+  doctorId: string;
+  title: string;
+  /** PRJCATEGORY id (api.crm/bootstrap prjc.prjCategory) */
+  categoryId: string;
+  /** PRJSTATE id (api.crm/bootstrap prjc.prjState) */
+  stateId: string;
+  notes: string;
+}
+
+/** Selectable (isActive) project states / categories from api.crm/bootstrap prjc */
+export interface ProjectLookups {
+  states: MachineRef[];
+  categories: MachineRef[];
+}
+
 export type ProjectEventType =
   | "CREATED"
   | "OFFER_REQUESTED"
