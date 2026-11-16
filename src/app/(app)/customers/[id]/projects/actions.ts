@@ -178,6 +178,9 @@ export async function setProjectStateAction(fd: FormData): Promise<ActionResult>
   redirect(`/customers/${doctorId}/projects/${projectId}?saved=state`);
 }
 
+/** PRJSTATE «Προσφορά εστάλη» (api.crm/bootstrap prjc.prjState) – set on the project when an offer is created */
+const STATE_OFFER_SENT = "1030";
+
 /** Product search for an offer line (api.crm.products/list {q}); at least 2 characters. */
 export async function searchProductsAction(q: string): Promise<{ total: number; items: ProductHit[] } | { error: string }> {
   await requireUser();
@@ -232,8 +235,18 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
     console.error("[projects] create offer failed", e);
     return { error: e instanceof Error ? e.message : String(e) };
   }
+  // the offer exists now → the project moves to «Προσφορά εστάλη» (owner, 2026-11-16). If SoftOne refuses that, the
+  // offer must NOT come back as a form error (a second «Αποθήκευση» would duplicate it): the project screen says so.
+  let stageFailed = false;
+  try {
+    await setProjectState(projectId, STATE_OFFER_SENT);
+  } catch (e) {
+    console.error("[projects] stage after offer failed", e);
+    stageFailed = true;
+  }
   revalidatePath(`/customers/${doctorId}/projects/${projectId}`);
+  revalidatePath(`/customers/${doctorId}/projects`);
   revalidatePath(`/customers/${doctorId}/offers`);
-  redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer`);
+  redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer${stageFailed ? "&stage=failed" : ""}`);
 }
 

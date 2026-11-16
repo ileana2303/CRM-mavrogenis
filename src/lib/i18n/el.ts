@@ -241,6 +241,7 @@ export const el = {
     newOffer: "Νέα προσφορά",
     offerComments: "Σχόλια προσφοράς",
     offerSaved: "Η προσφορά καταχωρήθηκε στο SoftOne.",
+    offerStageFailed: "Το στάδιο του project δεν άλλαξε σε «Προσφορά εστάλη» – αλλάξτε το παρακάτω (η προσφορά έχει ήδη καταχωρηθεί).",
     stateSaved: "Το στάδιο ενημερώθηκε.",
     notesField: "Παρατηρήσεις",
     requiredError: "Συμπληρώστε τίτλο, τύπο και στάδιο.",
