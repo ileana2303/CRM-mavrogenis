@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -172,6 +172,46 @@ export interface S1HospitalRow {
 export function rowToHospital(r: S1HospitalRow): Hospital {
   if (r.trdr === undefined || r.trdr === null || r.trdr === "") throw new Error(`api.crm/hospitals: row without trdr: ${JSON.stringify(r)}`);
   return { id: String(r.trdr), code: r.code, name: r.name ?? "" };
+}
+
+// ---- projects (api.crm.customers/projects {trdr}) ----------------------------
+
+export interface S1ProjectRow {
+  prjc: number | string;
+  code?: string;
+  name?: string;
+  isActive?: number | string;
+  /** id into api.crm/bootstrap prjc.prjState (Ενδιαφέρον 1000 … Χάθηκε 1080) */
+  prjState?: number | string | null;
+  /** id into api.crm/bootstrap prjc.prjCategory (New Clinic 1000, Replacement 1001, Public Tender 1002) */
+  prjCategory?: number | string | null;
+  insDate?: string;
+  updDate?: string;
+}
+
+/** A master-list id → { id, name }; none when the project has no value; throws on an id the list doesn't know. */
+function lookup(id: number | string | null | undefined, names: Map<string, string>, what: string, prjc: string) {
+  if (id === undefined || id === null || id === "") return {};
+  const name = names.get(String(id));
+  if (name === undefined) throw new Error(`api.crm.customers/projects: project ${prjc} has ${what} ${id}, which api.crm/bootstrap prjc.${what} does not list`);
+  return { id: String(id), name };
+}
+
+export function rowToProjectSummary(
+  r: S1ProjectRow,
+  lookups: { states: Map<string, string>; categories: Map<string, string> },
+): ProjectSummary {
+  if (r.prjc === undefined || r.prjc === null || r.prjc === "") throw new Error(`api.crm.customers/projects: row without prjc: ${JSON.stringify(r)}`);
+  return {
+    id: String(r.prjc),
+    code: r.code ?? "",
+    title: r.name ?? "",
+    active: String(r.isActive ?? "1") !== "0",
+    state: lookup(r.prjState, lookups.states, "prjState", String(r.prjc)),
+    category: lookup(r.prjCategory, lookups.categories, "prjCategory", String(r.prjc)),
+    createdAt: s1Date(r.insDate),
+    updatedAt: s1Date(r.updDate) || s1Date(r.insDate),
+  };
 }
 
 // ---- products (api.crm.products) --------------------------------------------

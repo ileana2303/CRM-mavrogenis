@@ -17,6 +17,7 @@ import type {
   Product,
   Project,
   ProjectEvent,
+  ProjectSummary,
   SalesTurnover,
   Target,
   Task,
@@ -70,6 +71,8 @@ export interface VisitsRepo {
 
 export interface ProjectsRepo {
   listByDoctor(doctorId: string): Promise<Project[]>;
+  /** api.crm.customers/projects {trdr} – the doctor's PRJC rows */
+  summariesByDoctor(doctorId: string): Promise<ProjectSummary[]>;
   listByUser(userId: string): Promise<Project[]>;
   listAll(): Promise<Project[]>;
   findById(id: string): Promise<Project | null>;

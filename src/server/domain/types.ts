@@ -180,6 +180,21 @@ export interface Project {
   lines: ProjectLine[];
 }
 
+/** A doctor's project as api.crm.customers/projects returns it (SoftOne PRJC) – list only, no stage/value yet. */
+export interface ProjectSummary {
+  id: string;
+  code: string;
+  title: string;
+  /** PRJC isActive: selectable in SoftOne – not open/closed (that comes from the stage) */
+  active: boolean;
+  /** Στάδιο (PRJC prjState); empty when the project has none */
+  state: { id?: string; name?: string };
+  /** Τύπος (PRJC prjCategory); empty when the project has none */
+  category: { id?: string; name?: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ProjectEventType =
   | "CREATED"
   | "OFFER_REQUESTED"

@@ -6,10 +6,10 @@
  */
 import { redirect } from "next/navigation";
 import { getSession } from "../../auth/session";
-import type { CheckIn, Doctor, MachineCatalog, MachineRef, Task, User } from "../../domain/types";
+import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -77,8 +77,21 @@ const toRefs = (rows: S1MasterRow[] | undefined): MachineRef[] =>
     .sort((a, b) => a.name.localeCompare(b.name, "el"));
 
 // master data is the same for every user → short in-memory cache
-let catalogCache: { at: number; data: MachineCatalog } | null = null;
+// api.crm/bootstrap: the master lists (machine catalog, project states / categories, …), cached 5 min
+type S1Bootstrap = {
+  machine?: { categories?: S1MasterRow[]; marks?: S1MasterRow[]; models?: S1MasterRow[] };
+  prjc?: { prjState?: S1MasterRow[]; prjCategory?: S1MasterRow[] };
+};
+let bootstrapCache: { at: number; data: S1Bootstrap } | null = null;
 const CATALOG_TTL = 5 * 60_000;
+async function bootstrap(): Promise<S1Bootstrap> {
+  if (bootstrapCache && Date.now() - bootstrapCache.at < CATALOG_TTL) return bootstrapCache.data;
+  const data = (await js<never>("api.crm", "bootstrap", {})) as unknown as S1Bootstrap;
+  bootstrapCache = { at: Date.now(), data };
+  return data;
+}
+/** id → name for every row, inactive included: an old project may still point at a retired state */
+const nameById = (rows: S1MasterRow[] | undefined) => new Map((rows ?? []).map((r) => [String(r.id), r.name ?? ""]));
 
 export const softOneProvider: DataProvider = {
   name: "softone",
@@ -194,6 +207,19 @@ export const softOneProvider: DataProvider = {
   visits: { listByDoctor: todo("visits.listByDoctor"), listByUser: todo("visits.listByUser"), listAll: todo("visits.listAll"), create: todo("visits.create") },
   projects: {
     listByDoctor: todo("projects.listByDoctor"),
+    // api.crm.customers/projects {trdr, page, pageSize} → { totalCount, data: [{ prjc, code, name, isActive, prjState, prjCategory, insDate, updDate }] }
+    // prjState / prjCategory = ids into api.crm/bootstrap prjc.{prjState, prjCategory} (owner, 2026-11-16)
+    async summariesByDoctor(doctorId) {
+      const prjc = (await bootstrap()).prjc ?? {};
+      const lookups = { states: nameById(prjc.prjState), categories: nameById(prjc.prjCategory) };
+      const out: ProjectSummary[] = [];
+      for (let page = 1; ; page++) {
+        const res = await js<S1ProjectRow[]>("api.crm.customers", "projects", { trdr: Number(doctorId), page, pageSize: 100 });
+        const rows = res.data ?? [];
+        out.push(...rows.map((r) => rowToProjectSummary(r, lookups)));
+        if (rows.length === 0 || out.length >= Number(res.totalCount ?? 0)) return out;
+      }
+    },
     listByUser: todo("projects.listByUser"),
     listAll: todo("projects.listAll"),
     findById: todo("projects.findById"),
@@ -296,14 +322,8 @@ export const softOneProvider: DataProvider = {
     },
     // api.crm/bootstrap → machine: { categories, marks, models } (owner, 2026-11-11)
     async machineCatalog() {
-      if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL) return catalogCache.data;
-      const res = (await js<never>("api.crm", "bootstrap", {})) as unknown as {
-        machine?: { categories?: S1MasterRow[]; marks?: S1MasterRow[]; models?: S1MasterRow[] };
-      };
-      const m = res.machine ?? {};
-      const data = { categories: toRefs(m.categories), marks: toRefs(m.marks), models: toRefs(m.models) };
-      catalogCache = { at: Date.now(), data };
-      return data;
+      const m = (await bootstrap()).machine ?? {};
+      return { categories: toRefs(m.categories), marks: toRefs(m.marks), models: toRefs(m.models) };
     },
     async findProduct(code) {
       const res = await js<S1ProductRow[]>("api.crm.products", "list", { code, page: 1, pageSize: 5 });

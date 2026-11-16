@@ -48,6 +48,11 @@ export function listProjects(doctorId: string) {
   return db().projects.listByDoctor(doctorId);
 }
 
+/** The doctor's projects as SoftOne lists them (code, title, active) – what the project list shows today. */
+export function listProjectSummaries(doctorId: string) {
+  return db().projects.summariesByDoctor(doctorId);
+}
+
 export function getProject(id: string) {
   return db().projects.findById(id);
 }

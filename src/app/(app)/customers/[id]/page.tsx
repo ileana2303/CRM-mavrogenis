@@ -10,7 +10,7 @@ import { requireUser } from "@/server/auth/current-user";
 import { doctorFullName, getConsent, getDoctor } from "@/server/services/customer-service";
 import { openCheckIn } from "@/server/services/checkin-service";
 import { pendingForDoctor } from "@/server/services/task-service";
-import { listProjects } from "@/server/services/project-service";
+import { listProjectSummaries } from "@/server/services/project-service";
 import { SOON } from "@/lib/features";
 
 export const metadata = { title: el.hub.title };
@@ -28,15 +28,16 @@ export default async function HubPage({ params, searchParams }: { params: Promis
     getConsent(id),
     openCheckIn(id, session).then((r) => ({ open: r, error: null as string | null }), (e: unknown) => ({ open: null, error: e instanceof Error ? e.message : String(e) })),
     pendingForDoctor(id),
-    SOON.projects ? null : listProjects(id),
+    SOON.projectList ? null : listProjectSummaries(id),
   ]);
   const open = openRes.open;
-  const active = projects?.filter((p) => p.status === "ACTIVE").length ?? 0;
+  // no open/closed flag in SoftOne yet (isActive = selectable in SoftOne), so the tile counts all projects
+  const active = projects?.length ?? 0;
 
   const tiles: Array<{ href: string; label: string; icon: IconName; meta?: React.ReactNode; soon?: boolean }> = [
     { href: `/customers/${id}/equipment`, label: el.hub.equipment, icon: "stethoscope" },
     { href: `/customers/${id}/visit`, label: el.hub.visit, icon: "pen", soon: SOON.visits },
-    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null, soon: SOON.projects },
+    { href: `/customers/${id}/projects`, label: el.hub.projects, icon: "briefcase", meta: active ? <Badge tone="blue">{active}</Badge> : null, soon: SOON.projectList },
     { href: `/customers/${id}/offers`, label: el.hub.offers, icon: "file" },
     { href: `/customers/${id}/history`, label: el.hub.history, icon: "chart", soon: SOON.history },
     { href: `/customers/${id}/kpis`, label: el.hub.kpis, icon: "trending", soon: SOON.kpis },

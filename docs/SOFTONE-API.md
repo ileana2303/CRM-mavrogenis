@@ -44,6 +44,7 @@ Row (getData ✔): + `actType (CCCACTTYPE), dRank (CCCDRANK id), hospitals[{trdr
 | `list` ✔ | `q, name, afm, email, phone01, phone02, mobilePhone, isDoctor, page, pageSize` | **please add to the row**: `firstName, lastName, address, city, zip, salesman, dRank, insDate, updDate` ✔ (done). Escape `'` in the LIKE values (`replace(/'/g,"''")`) — the CRM sends user input. |
 | `getData` ✔ | `trdr` | **please add the same columns as `list`** (`firstName, lastName, address, city, zip, salesman, insDate, updDate`) plus `dRankCode (CCCDRANK.code)` — today getData returns fewer fields than list |
 | ~~`save`~~ | — | **Not needed.** The CRM writes doctors with standard `setData` on object `CUSTOMER`: tables `CUSTOMER` (NAME, CCCFNAME, CCCLNAME, AFM, EMAIL, ADDRESS, CITY, ZIP, CCCACTTYPE, CCCDRANK, CCCISDOCTOR=1) and `CUSEXTRA` (VARCHAR03 = mobile). Hospitals: detail `CCCTRDTRDR` `[{TRDREL, LINENUM}]` (TRDREL = hospital TRDR) with the general detail rules. `SALESMAN` = PRSN id. |
+| `projects` ✔ | `trdr, page?, pageSize?` | `{ totalCount, data: [{ prjc, code, name, isActive, prjState, prjCategory, insDate, updDate }] }` — the doctor's PRJC rows; the CRM pages until totalCount. prjState / prjCategory = ids into `api.crm/bootstrap` `prjc.{prjState, prjCategory}` `{id, code, name, isActive}`; left out when empty. Value / last offer / lines are not in the row yet. |
 | `getConsent` | `trdr` | `{ id, trdr, signername, signature (base64 png), chemail, chsms, chphone, chviber, signedat, userid }` |
 | `saveConsent` | same fields, no id | `{ id }` |
 

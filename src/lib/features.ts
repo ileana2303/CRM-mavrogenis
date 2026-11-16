@@ -4,7 +4,8 @@
  */
 export const SOON = {
   visits: true, // visits.* – Καταγραφή επίσκεψης
-  projects: true, // projects.*, offers.create/update – Έργα / προσφορές έργου
+  projectList: false, // projects.summariesByDoctor – a doctor's project list (api.crm.customers/projects)
+  projects: true, // project detail / new / close / revise / follow-up, offers.create/update – need stage, value, lines, events
   history: true, // stats.doctorHistory – Ιστορικό πελάτη
   kpis: true, // stats.target / stats.turnover (+ visits, projects) – KPIs
   checkInLog: true, // checkIns.list – Αφίξεις (manager)
