@@ -1,3 +1,8 @@
+> **Historical (2026-10-24 proposal).** Much of this was replaced by Panagiotis' decisions: doctors' hospitals are TRDR
+> linked through `CCCTRDTRDR`, projects are `PRJC`, offers are `SALDOC` series 7015 linked by `PRJC`, tasks / arrivals
+> are `SOTASK` / `SOMEETING`, equipment is `CCCTRDMACHINES`. The current contract is [`SOFTONE-API.md`](SOFTONE-API.md);
+> state and open items are in [`HANDOFF.md`](../HANDOFF.md).
+
 # SoftOne requirements for the Sales CRM
 
 Everything the CRM reads or writes goes through SoftOne Web Services (`/s1services`, JSON).

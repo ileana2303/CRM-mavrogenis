@@ -12,16 +12,20 @@ POST https://mavrogenis.oncloud.gr/s1services/JS/<script>/<function>
 
 Conventions kept from your script: **lowercase SoftOne column names** in rows (`trdr`, `afm`, `phone02`…),
 `data` is always an **array** (one element for single-record calls), paging with `page / pageSize / totalCount`,
-`q` for free-text search. Dates as `YYYY-MM-DD`, timestamps as `YYYY-MM-DD HH:MM:SS` (server local time).
+`q` for free-text search. Dates as `YYYY-MM-DD`, timestamps as `YYYY-MM-DD HH:MM:SS` (server local time =
+**Europe/Athens, no zone** — the CRM reads every SoftOne date as Athens time via `src/lib/athens.ts`; the app servers run in UTC).
 Lookup values as integers (code lists in section 10); the CRM maps them.
 
 Auth is the standard `login` (`appid: 1306`) + `authenticate` (`COMPANY 1001, BRANCH 1000, REFID` from `objs[0]`) per user.
 **Standard services (`getData`, `setData`, `getBrowserInfo`…) work with appid 1306 as long as `appid` is in every request body.**
 Writes to standard objects (CUSTOMER, SALDOC) therefore go through `setData` directly from the CRM; JS functions are for reads and custom tables.
 
-Already existing ✔: `api.crm/me`, `api.crm/bootstrap`, `api.crm.customers/list`, `api.crm.customers/getData`.
-The CRM uses SoftOne as its **only** data source; any repo method without an endpoint yet throws `NotImplemented`.
-Everything else below is to be created, in the order of section 11.
+Existing and used ✔ (2026-11-16): `api.crm/me`, `api.crm/users`, `api.crm/bootstrap`, `api.crm/dashboard`,
+`api.crm/hospitals`, `api.crm.customers/list | getData | setSignature | projects`, `api.crm.actions/getPendings |
+getPendingArrivals`, `api.crm.offers/list`, `api.crm.products/list`; standard `getData` / `setData` / `calculate` on
+CUSTOMER, PRJC, SALDOC, SOMEETING, SOTASK with form `_CRM_` where stated.
+The CRM uses SoftOne as its **only** data source; any repo method without an endpoint yet throws `NotImplemented` and its
+screen shows «Σύντομα διαθέσιμο» (`src/lib/features.ts`). State and open items: [`HANDOFF.md`](../HANDOFF.md).
 
 ---
 
@@ -32,7 +36,7 @@ response `objs[0].REFID`** — it differs per user). The CRM keeps the clientID 
 | fn | params | returns |
 |---|---|---|
 | `me` ✔ | — | `{ success, role (1 Πωλητής / 2 Manager / 3 Υποστήριξη), prsn, name }` — PRSN is the salesman identity (TRDR.SALESMAN points to it) |
-| `bootstrap` ✔ | — | `{ success, dRank: [{id, code, name, isActive}] }` — CCCDRANK filled: id = code = 1 Ειδικευόμενος, 2 Επιμελητής, 3 Διευθυντής, 4 Καθηγητής |
+| `bootstrap` ✔ | — | `{ success, dRank, cusUtbl05, machine: {categories, marks, models}, prjc: {prjState, prjCategory} }` — every list `[{id, code, name, isActive}]` (`isActive` = selectable). dRank: 1 Ειδικευόμενος, 2 Επιμελητής, 3 Διευθυντής, 4 Καθηγητής. prjState (pipeline, kept in this order): 1000 Ενδιαφέρον, 1010 Demo / Επίδειξη, 1020 Αίτημα προσφοράς, 1030 Προσφορά εστάλη, 1040 Διαπραγμάτευση, 1050 Σε αναμονή, 1060 Κερδήθηκε, 1080 Χάθηκε. prjCategory: 1000 New Clinic, 1001 Replacement, 1002 Public Tender. Cached 5 min by the CRM. **Wanted:** `isClosed` / `isWon` on prjState. |
 | `users` | `role?` | `data: [{ userid, prsn, name, role, salesman, manager }]` — managers need the list of salespeople |
 
 ## 2. `api.crm.customers` ✔ — doctors are TRDR (SODTYPE 13), field names as in your script
@@ -60,11 +64,25 @@ Read ✔: `api.crm.customers/getData` returns `signatures: [{ name: "SIGNATURE_<
 ## 3. `api.crm/hospitals` ✔ — hospitals = TRDR of the hospital category
 | fn | params | row |
 |---|---|---|
-| `hospitals` ✔ | `q?` | `{ trdr, code, name, isActive? }` (shape assumed 2026-11-16) — linked to doctors via the CCCTRDTRDR detail of CUSTOMER (TRDREL, form `_CRM_`) |
+| `hospitals` ✔ | `q?` | `{ trdr, code, name, isActive }` (verified 2026-11-16, 233 rows) — linked to doctors via the CCCTRDTRDR detail of CUSTOMER (TRDREL, form `_CRM_`); link/unlink round-trip verified on 34583. A hospitals-only change sends only `{CCCTRDTRDR:[…]}`. |
+
+## 3a. Projects — PRJC ✔ (2026-11-16)
+
+| step | call |
+|---|---|
+| list (per doctor) | `api.crm.customers/projects {trdr, page, pageSize}` → `{ totalCount, data: [{ prjc, code, name, isActive, prjState, prjCategory, insDate, updDate }] }`; the CRM pages until `totalCount`; empty prjState / prjCategory are left out of the row |
+| one project | standard `getData` object `PRJC`, `form: "_CRM_"`, `key: <prjc>` → `PRJC[0]` (CODE, NAME, TRDR, PRJCATEGORY "1001\|Replacement", PRJSTATE "1000\|Ενδιαφέρον", SALESMAN + `SALESMAN_PRSNIN_NAME/NAME2`, REMARKS, ISACTIVE, INSDATE, UPDDATE) and `VOPPOFFS` (the project's offers: FINDOC, FINCODE, SERIES, TFPRMS, TRNDATE, LNETAMNT, APPRV, ISCANCEL, REMARKS) |
+| new project | `setData` object `PRJC`, `form: "_CRM_"`: `{ "PRJC": [{ "CODE": "0*", "PRJCRM": 2, "NAME", "TRDR", "PRJCATEGORY", "PRJSTATE", "REMARKS"?, "SALESMAN": <session PRSN> }] }` |
+| stage change | `setData` `PRJC`, `key: <prjc>`, `form: "_CRM_"`, `{ "PRJC": [{ "PRJSTATE": <id> }] }` (header delta only) |
+
+Rules (verified): `CODE "0*"` — plain `"*"` is refused («Δεν έχετε συμπληρώσει το πεδίο 'Κωδικός'»). **`PRJCRM` must come
+right after `CODE`**; sent later, PRJCATEGORY and PRJSTATE are silently not stored. `PRJCRM` is always 2 on new records.
+`isActive` means selectable in SoftOne, not open / closed.
 
 ## 4–6. Activities — DECIDED 2026-11-10: they live in **SOACTION** (objects SOMEETING, SOCALL, SOEMAIL, SOTASK, SOACTION)
 
-### Proposed mapping (needs your approval / corrections before I code it)
+### Proposed mapping (2026-11-10 proposal — the **Project** rows are superseded: projects are PRJC, see §3a; offers are
+SALDOC linked by `PRJC`, see §7. Visits / follow-ups below are still open.)
 
 | CRM entity | SoftOne object | Standard fields | Custom fields (CCC…) |
 |---|---|---|---|
@@ -90,7 +108,28 @@ ACTSTATUS codes, series ids per object and the ACTOR semantics (PRSN?) must come
 | `api.crm.consent` | `get` / `save` | `trdr` | spec §2.7 |
 | `api.crm.checkins` | `open` / `list` | `userid`, `trdr`, `from`, `to` | spec §2.8 (writes via setData on the chosen object/table) |
 
-## 7. `api.crm.offers` ✔ — reads cover **all** offer series of the doctor (decided 2026-11-10); the CRM **writes only to series 7015**; DISC2PRC available
+## 7. Offers — SALDOC ✔ — reads cover **all** offer series of the doctor (decided 2026-11-10); the CRM **writes only to series 7015** («OFFCRM»)
+
+### New offer inside a project (built 2026-11-16)
+
+| step | call |
+|---|---|
+| product search | `api.crm.products/list {q, page: 1, pageSize: 20}` (5.527 items — searched as you type, never preloaded; the CRM shows "found N, showing 20") |
+| live preview | standard `calculate` object `SALDOC`, `form: "_CRM_"`, **same `data` as the save**; nothing is stored. Returns getData-shaped `SALDOC` (NETAMNT, VATAMNT, SUMAMNT) and `ITELINES` (PRICE, DISC1PRC, DISC1VAL, LINEVAL, VATAMNT, VAT_VAT_PERCNT) |
+| save | `setData` `SALDOC`, `form: "_CRM_"`: `{ "SALDOC": [{ "SERIES": 7015, "TRDR", "PRJC", "SALESMAN": <session PRSN>, "COMMENTS"? }], "ITELINES": [{ "LINENUM": 9000001…, "MTRL", "QTY1", "PRICE"?, one of "DISC1PRC" / "DISC1VAL" / "LINEVAL" }] }` |
+| after save | `setData PRJC key {PRJSTATE: 1030}` «Προσφορά εστάλη» |
+
+Pricing rules (verified with calculate): a line **without `PRICE`** gets SoftOne's price for this customer (e.g. MTRL
+33116 → 18.165 = CCCPRICE01, not `floorPrice`); a typed `PRICE` is kept. Send **exactly one** of DISC1PRC / DISC1VAL /
+LINEVAL: SoftOne keeps the price and derives the other two (LINEVAL overrides DISC1PRC when both are sent).
+SoftOne approves the document at once (APPRV 1).
+
+**Open:** for items whose `CCCPRICE01` is 0 (e.g. MTRL 36182, code 00000661) `calculate` resets a typed `PRICE 600` to
+`0` — `{"MTRL":36182,"QTY1":1,"PRICE":600}` → PRICE 0, LINEVAL 0; only `LINEVAL 600` survives. Needs a SoftOne-side fix
+(price rule / line script). Also open: print / PDF / email of the offer, the terms text (`REMARKS`, `CCCOFFERBODY`),
+revision (in place vs new version), approval by support first.
+
+### Read lists
 | fn | params | row |
 |---|---|---|
 | `list` | `trdr?`, `project?`, `requestedby?`, `cccstatus?` (support queue = 1) | offer row with `lines[]` |

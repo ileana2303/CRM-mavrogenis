@@ -5,10 +5,10 @@
 export const SOON = {
   visits: true, // visits.* – Καταγραφή επίσκεψης
   projectCreate: false, // projects.createForDoctor – «Νέο Project» (setData PRJC, form _CRM_)
-  projectList: false,
+  projectList: false, // projects.summariesByDoctor – a doctor's project list (api.crm.customers/projects)
   projectOffer: false, // offers.createForProject – «Νέα προσφορά» inside a project (setData SALDOC _CRM_)
-  projectDetail: false, // projects.detail – project screen (getData PRJC _CRM_): header + offers // projects.summariesByDoctor – a doctor's project list (api.crm.customers/projects)
-  projects: true, // project detail / new / close / revise / follow-up, offers.create/update – need stage, value, lines, events
+  projectDetail: false, // projects.detail – project screen (getData PRJC _CRM_): header + offers, stage change
+  projects: true, // old project screens: close / revise / follow-up, offers.create/update, project events
   history: true, // stats.doctorHistory – Ιστορικό πελάτη
   kpis: true, // stats.target / stats.turnover (+ visits, projects) – KPIs
   checkInLog: true, // checkIns.list – Αφίξεις (manager)
