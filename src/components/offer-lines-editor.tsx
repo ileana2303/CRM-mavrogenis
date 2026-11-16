@@ -3,20 +3,37 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Icon } from "./icons";
 import { fmtEur } from "@/lib/format";
+import { cleanNumberInput, formatGr, parseGr } from "@/lib/gr-number";
 import type { OfferCalc, ProductHit } from "@/server/domain/types";
 import { calculateProjectOfferAction, searchProductsAction } from "@/app/(app)/customers/[id]/projects/actions";
 
-/** `price` is what the input shows; `manual` = typed by the salesperson (sent as PRICE), else SoftOne prices it. */
-type Line = { key: number; product: ProductHit | null; qty: string; price: string; manual: boolean; discount: string };
-
-const num = (v: string) => {
-  const n = parseFloat(v.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
+/**
+ * `price`: `manual` = typed (sent as PRICE), else SoftOne's. `by`: what drives the line – discount % (DISC1PRC),
+ * discount € (DISC1VAL) or value (LINEVAL); SoftOne works out the other two and they show its answer.
+ */
+type Line = {
+  key: number;
+  product: ProductHit | null;
+  qty: string;
+  price: string;
+  manual: boolean;
+  discount: string;
+  discountValue: string;
+  value: string;
+  by: "discount" | "discountValue" | "value";
 };
-const blank = (key: number): Line => ({ key, product: null, qty: "1", price: "", manual: false, discount: "" });
+
+/** Greek-typed field → number ("4.714,29" → 4714.29); empty / unreadable = 0 */
+const num = (v: string) => parseGr(v) ?? 0;
+/** decimals each field shows (Greek format: "4.714,286", "4,2424", "4.514,29") */
+const DECIMALS = { qty: 3, price: 6, discount: 4, discountValue: 2, value: 2 } as const;
+type NumField = keyof typeof DECIMALS;
+const blank = (key: number): Line => ({ key, product: null, qty: "1", price: "", manual: false, discount: "", discountValue: "", value: "", by: "discount" });
+
 
 /**
- * Lines of a new offer → hidden input `lines` = [{ mtrl, qty, price | null, discountPct }] (SALDOC ITELINES).
+ * Lines of a new offer → hidden input `lines` = [{ mtrl, qty, price | null, discountPct | discountValue | lineValue }]
+ * (SALDOC ITELINES). Numbers are typed and shown the Greek way ("4.714,29", see lib/gr-number).
  * Every change asks SoftOne `calculate` (same payload as the save, nothing stored): a line without a typed price
  * gets SoftOne's price (its pricing rules for this customer), and value / VAT / totals shown are SoftOne's.
  * On save a SoftOne-priced line is sent without PRICE, so the saved document matches the preview.
@@ -29,13 +46,29 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
   const [calculating, startCalc] = useTransition();
   const seq = useRef(0);
   const update = (key: number, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  /** on leaving a field: "4714,29" → "4.714,29" (same number, so no new calculate) */
+  const tidy = (key: number, field: NumField) =>
+    setLines((ls) =>
+      ls.map((l) => {
+        if (l.key !== key) return l;
+        const n = parseGr(l[field]);
+        return n === null ? l : { ...l, [field]: formatGr(n, DECIMALS[field]) };
+      }),
+    );
 
   const priced = lines.filter((l) => l.product);
   const payload = useMemo(
     () =>
       lines
         .filter((l) => l.product)
-        .map((l) => ({ mtrl: l.product!.mtrl, qty: num(l.qty), price: l.manual ? num(l.price) : null, discountPct: num(l.discount) })),
+        .map((l) => ({
+          mtrl: l.product!.mtrl,
+          qty: num(l.qty),
+          price: l.manual ? num(l.price) : null,
+          discountPct: l.by === "discount" ? num(l.discount) : null,
+          discountValue: l.by === "discountValue" && l.discountValue.trim() !== "" ? num(l.discountValue) : null,
+          lineValue: l.by === "value" && l.value.trim() !== "" ? num(l.value) : null,
+        })),
     [lines],
   );
   const signature = JSON.stringify(payload);
@@ -58,13 +91,20 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
         }
         setCalcError(null);
         setCalc(r);
-        // SoftOne-priced lines show SoftOne's price
+        // show SoftOne's answer in the fields the salesperson did not type: price, and the discount or the value
         setLines((ls) => {
           let i = 0;
           return ls.map((l) => {
             if (!l.product) return l;
             const c = r.lines[i++];
-            return c && !l.manual ? { ...l, price: String(c.price) } : l;
+            if (!c) return l;
+            return {
+              ...l,
+              ...(l.manual ? {} : { price: formatGr(c.price, DECIMALS.price) }),
+              ...(l.by === "discount" ? {} : { discount: c.discountPct ? formatGr(c.discountPct, DECIMALS.discount) : "" }),
+              ...(l.by === "discountValue" ? {} : { discountValue: c.discountValue ? formatGr(c.discountValue, DECIMALS.discountValue) : "" }),
+              ...(l.by === "value" ? {} : { value: formatGr(c.lineValue, DECIMALS.value) }),
+            };
           });
         });
       });
@@ -84,14 +124,25 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
       {lines.map((l, i) => {
         const c = calcFor(l);
         return (
-          <div key={l.key} className="card p-3 grid gap-3 grid-cols-2 sm:grid-cols-[100px_170px_110px_minmax(0,1fr)_auto] sm:items-end">
-            <div className="col-span-full">
-              <span className="label">Είδος {i + 1}</span>
-              <ProductSearch value={l.product} onPick={(p) => update(l.key, { product: p, price: "", manual: false })} />
+          <div key={l.key} className="card p-3 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[0.7fr_1fr_0.8fr_1fr_1.25fr_1.15fr] items-end">
+            <div className="col-span-full flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <span className="label">Είδος {i + 1}</span>
+                <ProductSearch value={l.product} onPick={(p) => update(l.key, { product: p, price: "", manual: false, discountValue: "", value: "", by: "discount" })} />
+              </div>
+              <button
+                type="button"
+                aria-label={`Αφαίρεση είδους ${i + 1}`}
+                disabled={lines.length === 1}
+                onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
+                className="btn-ghost min-h-11 disabled:opacity-30"
+              >
+                <Icon.x size={18} />
+              </button>
             </div>
             <label className="block">
               <span className="label">Ποσότητα</span>
-              <input className="input tabular-nums" inputMode="decimal" value={l.qty} onChange={(e) => update(l.key, { qty: e.target.value })} />
+              <input className="input tabular-nums" inputMode="decimal" value={l.qty} onChange={(e) => update(l.key, { qty: cleanNumberInput(e.target.value), by: "discount" })} onBlur={() => tidy(l.key, "qty")} />
             </label>
             <div>
               <span className="label">{l.manual ? "Τιμή (δική σας)" : "Τιμή SoftOne"}</span>
@@ -102,14 +153,15 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
                   value={l.price}
                   placeholder={l.product ? "…" : ""}
                   disabled={!l.product}
-                  onChange={(e) => update(l.key, { price: e.target.value, manual: true })}
+                  onChange={(e) => update(l.key, { price: cleanNumberInput(e.target.value), manual: true, by: "discount" })}
+                  onBlur={() => tidy(l.key, "price")}
                 />
                 {l.manual && (
                   <button
                     type="button"
                     title="Επαναφορά τιμής SoftOne"
                     aria-label="Επαναφορά τιμής SoftOne"
-                    onClick={() => update(l.key, { manual: false, price: "" })}
+                    onClick={() => update(l.key, { manual: false, price: "", by: "discount" })}
                     className="absolute inset-y-0 right-1 grid w-9 place-items-center rounded-lg text-brand-700 hover:bg-brand-50"
                   >
                     ↺
@@ -119,24 +171,48 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
             </div>
             <label className="block">
               <span className="label">Έκπτωση %</span>
-              <input className="input tabular-nums" inputMode="decimal" value={l.discount} onChange={(e) => update(l.key, { discount: e.target.value })} />
+              <input
+                className={`input tabular-nums ${l.by !== "discount" ? "border-dashed text-[var(--muted)]" : ""}`}
+                title={l.by !== "discount" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                inputMode="decimal"
+                value={l.discount}
+                disabled={!l.product}
+                onChange={(e) => update(l.key, { discount: cleanNumberInput(e.target.value), by: "discount" })}
+                onBlur={() => tidy(l.key, "discount")}
+              />
+            </label>
+            <label className="block">
+              <span className="label">Έκπτωση €</span>
+              <input
+                className={`input tabular-nums ${l.by !== "discountValue" ? "border-dashed text-[var(--muted)]" : ""}`}
+                title={l.by !== "discountValue" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                inputMode="decimal"
+                value={l.discountValue}
+                disabled={!l.product}
+                data-field="disc1val"
+                onChange={(e) => update(l.key, { discountValue: cleanNumberInput(e.target.value), by: "discountValue" })}
+                onBlur={() => tidy(l.key, "discountValue")}
+              />
+            </label>
+            <label className="block">
+              <span className="label">Αξία</span>
+              <input
+                className={`input tabular-nums font-semibold ${l.by !== "value" ? "border-dashed" : ""}`}
+                title={l.by !== "value" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                inputMode="decimal"
+                value={l.value}
+                placeholder={l.product ? "…" : ""}
+                disabled={!l.product}
+                onChange={(e) => update(l.key, { value: cleanNumberInput(e.target.value), by: "value" })}
+                onBlur={() => tidy(l.key, "value")}
+              />
             </label>
             <div>
-              <span className="label">Αξία</span>
-              <div className="min-h-11 flex flex-col justify-center tabular-nums">
-                <span className="font-semibold">{c ? fmtEur(c.lineValue, true) : l.product ? "…" : "—"}</span>
-                {c && <span className="text-xs text-[var(--muted)]">ΦΠΑ {c.vatPct}%: {fmtEur(c.vat, true)}</span>}
+              <span className="label">{c ? `ΦΠΑ ${c.vatPct}%` : "ΦΠΑ"}</span>
+              <div className="input tabular-nums bg-transparent border-dashed text-[var(--muted)] flex items-center" aria-readonly="true" data-field="vatamnt">
+                {c ? fmtEur(c.vat, true) : "—"}
               </div>
             </div>
-            <button
-              type="button"
-              aria-label={`Αφαίρεση είδους ${i + 1}`}
-              disabled={lines.length === 1}
-              onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
-              className="btn-ghost min-h-11 disabled:opacity-30"
-            >
-              <Icon.x size={18} />
-            </button>
           </div>
         );
       })}

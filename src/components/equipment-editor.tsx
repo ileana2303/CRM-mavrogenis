@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { cleanNumberInput, formatGr, parseGr } from "@/lib/gr-number";
 import { el } from "@/lib/i18n/el";
 import { categoryLabel } from "@/lib/equipment-summary";
 import { Icon } from "@/components/icons";
@@ -206,17 +207,9 @@ function Labeled({ label, span = "", children }: { label: string; span?: string;
   );
 }
 
-/** "1.500,50" / "1500,5" / "1500.50" / "1.500" → number. A comma is always the decimal mark; a lone dot is
- *  decimal only when 1–2 digits follow it, otherwise dots are thousands separators. */
-function parsePrice(t: string): number {
-  if (t.includes(",")) return Number(t.replace(/\./g, "").replace(",", "."));
-  if (/^\d*\.\d{1,2}$/.test(t)) return Number(t);
-  return Number(t.replace(/\./g, ""));
-}
-
-/** € amount; empty = no price (null). */
+/** € amount, typed and shown the Greek way ("1.500,50", lib/gr-number); empty = no price (null). */
 function PriceInput({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
-  const [text, setText] = useState(value === null ? "" : String(value).replace(".", ","));
+  const [text, setText] = useState(value === null ? "" : formatGr(value, 2));
   return (
     <div className="relative">
       <input
@@ -227,10 +220,14 @@ function PriceInput({ value, onChange }: { value: number | null; onChange: (v: n
         aria-label={el.equipment.price}
         value={text}
         onChange={(e) => {
-          const t = e.target.value.replace(/[^\d.,]/g, "");
+          const t = cleanNumberInput(e.target.value).replace("-", "");
           setText(t);
-          const n = parsePrice(t);
-          onChange(t.trim() === "" || !Number.isFinite(n) ? null : Math.round(n * 100) / 100);
+          const n = parseGr(t);
+          onChange(n === null ? null : Math.round(n * 100) / 100);
+        }}
+        onBlur={() => {
+          const n = parseGr(text);
+          if (n !== null) setText(formatGr(n, 2));
         }}
       />
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--muted)]">€</span>

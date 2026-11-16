@@ -224,17 +224,23 @@ export interface ProductHit {
   price: number;
 }
 
-/** One line of a new offer → SALDOC ITELINES. `price` null = let SoftOne price it (its rules, as `calculate` showed). */
+/**
+ * One line of a new offer → SALDOC ITELINES. `price` null = SoftOne prices it. Exactly one of discount %, discount €
+ * or line value drives the line; SoftOne keeps the price and works out the other two (verified with calculate).
+ */
 export interface NewS1OfferLine {
   mtrl: string;
   qty: number;
   price: number | null;
-  discountPct: number;
+  discountPct: number | null;
+  discountValue: number | null;
+  lineValue: number | null;
 }
 
 /** SoftOne's `calculate` on an offer draft: per line (same order as sent) and document totals */
 export interface OfferCalc {
-  lines: Array<{ price: number; discountPct: number; lineValue: number; vat: number; vatPct: number }>;
+  /** DISC1PRC / DISC1VAL, LINEVAL, VATAMNT per line as SoftOne computed them */
+  lines: Array<{ price: number; discountPct: number; discountValue: number; lineValue: number; vat: number; vatPct: number }>;
   net: number;
   vat: number;
   total: number;

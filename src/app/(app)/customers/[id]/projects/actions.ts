@@ -199,7 +199,9 @@ const offerLinesSchema = z.array(
     mtrl: z.string().min(1),
     qty: z.number().positive(),
     price: z.number().nonnegative().nullable(),
-    discountPct: z.number().min(0).max(100),
+    discountPct: z.number().min(0).max(100).nullable(),
+    discountValue: z.number().nonnegative().nullable(),
+    lineValue: z.number().nonnegative().nullable(),
   }),
 );
 
@@ -211,7 +213,7 @@ export async function calculateProjectOfferAction(input: {
 }): Promise<OfferCalc | { error: string }> {
   const user = await requireUser();
   const parsed = offerLinesSchema.safeParse(input.lines);
-  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%." };
+  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%, αξία ≥ 0." };
   if (parsed.data.length === 0) return { lines: [], net: 0, vat: 0, total: 0 };
   try {
     return await calculateOfferForProject({ doctorId: input.doctorId, projectId: input.projectId, comments: "", lines: parsed.data }, user);
@@ -227,7 +229,7 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
   const doctorId = str(fd, "doctorId");
   const projectId = str(fd, "projectId");
   const parsed = offerLinesSchema.safeParse(JSON.parse(str(fd, "lines") || "[]"));
-  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: είδος, ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%." };
+  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: είδος, ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%, αξία ≥ 0." };
   if (parsed.data.length === 0) return { error: "Προσθέστε τουλάχιστον ένα είδος." };
   try {
     await createOfferForProject({ doctorId, projectId, comments: str(fd, "comments"), lines: parsed.data }, user);

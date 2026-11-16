@@ -290,7 +290,7 @@ export function projectToSetData(p: NewS1Project, salesmanId?: string): Record<s
 
 /**
  * New offer inside a project → setData SALDOC, form _CRM_ (owner, 2026-11-16): SERIES first, then TRDR / PRJC / SALESMAN.
- * Lines → ITELINES {MTRL, QTY1, PRICE, DISC1PRC}, new lines numbered 9000001…; SoftOne prices VAT and totals.
+ * Lines → ITELINES {MTRL, QTY1, PRICE?, DISC1PRC | DISC1VAL | LINEVAL}, new lines numbered 9000001…; SoftOne prices VAT and totals.
  */
 export function projectOfferToSetData(o: NewS1Offer, series: number, salesmanId: string): Record<string, Array<Record<string, unknown>>> {
   return {
@@ -308,7 +308,14 @@ export function projectOfferToSetData(o: NewS1Offer, series: number, salesmanId:
       MTRL: Number(l.mtrl),
       QTY1: l.qty,
       ...(l.price !== null ? { PRICE: l.price } : {}),
-      ...(l.discountPct ? { DISC1PRC: l.discountPct } : {}),
+      // one driver only – SoftOne derives the other two (LINEVAL would override DISC1PRC if both were sent)
+      ...(l.lineValue !== null
+        ? { LINEVAL: l.lineValue }
+        : l.discountValue !== null
+          ? { DISC1VAL: l.discountValue }
+          : l.discountPct
+            ? { DISC1PRC: l.discountPct }
+            : {}),
     })),
   };
 }
@@ -323,7 +330,7 @@ export function calcToOffer(data: Record<string, Array<Record<string, string>>>,
   const lines = Array.from({ length: lineCount }, (_, i) => {
     const r = byIndex.get(i);
     if (!r) throw new Error(`calculate SALDOC: line ${i + 1} missing from the answer`);
-    return { price: n(r.PRICE), discountPct: n(r.DISC1PRC), lineValue: n(r.LINEVAL), vat: n(r.VATAMNT), vatPct: n(r.VAT_VAT_PERCNT) };
+    return { price: n(r.PRICE), discountPct: n(r.DISC1PRC), discountValue: n(r.DISC1VAL), lineValue: n(r.LINEVAL), vat: n(r.VATAMNT), vatPct: n(r.VAT_VAT_PERCNT) };
   });
   const h = data.SALDOC?.[0] ?? {};
   return { lines, net: n(h.NETAMNT), vat: n(h.VATAMNT), total: n(h.SUMAMNT) };
