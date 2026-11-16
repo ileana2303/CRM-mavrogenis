@@ -26,7 +26,14 @@ export interface S1CustomerRow {
   salesman?: string | number;
   insDate?: string;
   updDate?: string;
-  hospitals?: Array<{ ccchsptl: number | string; code?: string; name?: string; isActive?: number | string; linenum?: number | string }>;
+  /** linked hospitals = detail CCCTRDTRDR (doctor TRDR → hospital TRDR in TRDREL), owner 2026-11-16 */
+  hospitals?: Array<{
+    trdr?: number | string;
+    trdRel: number | string;
+    trdRel_customer_code?: string;
+    trdRel_customer_name?: string;
+    linenum?: number | string;
+  }>;
   /** signatures written by api.crm.customers/setSignature (field names tolerated in any case) */
   signatures?: Array<Record<string, unknown>>;
   /** installed equipment (owner, 2026-11-11): ids into api.crm/bootstrap machine lists */
@@ -59,9 +66,9 @@ export function rowToDoctor(r: S1CustomerRow): Doctor {
   const split = splitName(r.name ?? "");
   const act = String(r.actType ?? "");
   const hospitals: HospitalRef[] = (r.hospitals ?? []).map((h) => ({
-    id: String(h.ccchsptl),
-    code: h.code,
-    name: h.name ?? "",
+    id: String(h.trdRel),
+    code: h.trdRel_customer_code,
+    name: h.trdRel_customer_name ?? "",
     lineNo: h.linenum !== undefined && h.linenum !== null ? Number(h.linenum) : undefined,
   }));
   return {
@@ -86,8 +93,9 @@ export function rowToDoctor(r: S1CustomerRow): Doctor {
 
 /**
  * setData payload for the standard CUSTOMER object (doctor = TRDR SODTYPE 13), form "_CRM_".
- * Mobile -> CUSEXTRA.VARCHAR03. Hospitals -> detail CCCTRDHSPTL, rules agreed 2026-10-25:
- *   - new link:    { CCCHSPTL, LINENUM: 9000000, 9000001, ... }
+ * Mobile -> CUSEXTRA.VARCHAR03. Hospitals -> detail CCCTRDTRDR (TRDREL = the hospital's TRDR; TRDR = the doctor, set by
+ * SoftOne from the header). Detail rules agreed 2026-10-25:
+ *   - new link:    { TRDREL, LINENUM: 9000000, 9000001, ... }
  *   - keep a link: { LINENUM } (existing line number only)
  *   - remove link: leave its LINENUM out of the array
  * `existing` = the doctor's current links (with lineNo) when updating.
@@ -118,18 +126,19 @@ export function doctorToSetData(d: Partial<Doctor>, existing: HospitalRef[] = []
     for (const e of existing) if (e.lineNo !== undefined && wanted.has(e.id)) lines.push({ LINENUM: e.lineNo });
     let next = 9000000;
     const existingIds = new Set(existing.filter((e) => e.lineNo !== undefined).map((e) => e.id));
-    for (const h of d.hospitals) if (!existingIds.has(h.id)) lines.push({ CCCHSPTL: Number(h.id), LINENUM: next++ });
-    payload.CCCTRDHSPTL = lines;
+    for (const h of d.hospitals) if (!existingIds.has(h.id)) lines.push({ TRDREL: Number(h.id), LINENUM: next++ });
+    payload.CCCTRDTRDR = lines;
   }
   return payload;
 }
 
 /**
  * Update payload = header delta + complete detail (SoftOne rule, see memory/reference-softone-setdata-rules):
- * header fields only where the value changed; CCCTRDHSPTL only when the set of linked hospitals changed.
+ * header fields only where the value changed; CCCTRDTRDR only when the set of linked hospitals changed.
  */
 export function doctorUpdateDelta(patch: Partial<Doctor>, current: Doctor): Record<string, Array<Record<string, unknown>>> {
-  const next = doctorToSetData(patch, current.hospitals);
+  // a field left out of the patch is unchanged (not blank): a hospitals-only patch sends only CCCTRDTRDR
+  const next = doctorToSetData({ ...current, ...patch }, current.hospitals);
   const before = doctorToSetData(current, current.hospitals);
   const out: Record<string, Array<Record<string, unknown>>> = {};
 
@@ -146,14 +155,23 @@ export function doctorUpdateDelta(patch: Partial<Doctor>, current: Doctor): Reco
     const a = new Set(current.hospitals.map((h) => h.id));
     const b = new Set(patch.hospitals.map((h) => h.id));
     const same = a.size === b.size && [...a].every((id) => b.has(id));
-    if (!same) out.CCCTRDHSPTL = next.CCCTRDHSPTL;
+    if (!same) out.CCCTRDTRDR = next.CCCTRDTRDR;
   }
   return out;
 }
 
-/** hospitals master row -> Hospital */
-export function rowToHospital(r: { ccchsptl: number | string; code?: string; name?: string }): Hospital {
-  return { id: String(r.ccchsptl), code: r.code, name: r.name ?? "" };
+/** api.crm/hospitals row: a TRDR of the hospital category (owner, 2026-11-16). */
+export interface S1HospitalRow {
+  trdr: number | string;
+  code?: string;
+  name?: string;
+  isActive?: number | string;
+}
+
+/** hospitals master row -> Hospital (id = the hospital's TRDR, what CCCTRDTRDR.TRDREL points to) */
+export function rowToHospital(r: S1HospitalRow): Hospital {
+  if (r.trdr === undefined || r.trdr === null || r.trdr === "") throw new Error(`api.crm/hospitals: row without trdr: ${JSON.stringify(r)}`);
+  return { id: String(r.trdr), code: r.code, name: r.name ?? "" };
 }
 
 // ---- products (api.crm.products) --------------------------------------------

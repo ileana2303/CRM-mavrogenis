@@ -1,16 +1,11 @@
 import Link from "next/link";
-import {
-  BackLink,
-  Field,
-  Notice,
-  PageTitle,
-  Radios,
-  entries,
-} from "@/components/ui";
+import { BackLink, Field, Notice, PageTitle, Radios, entries } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import type { Doctor, Hospital } from "@/server/domain/types";
 import { saveDoctorAction, saveDoctorThenConsentAction } from "./actions";
 import { Select } from "@/components/select";
+import { AfmField } from "@/components/afm-field";
+import { HospitalPicker } from "@/components/hospital-picker";
 
 export function DoctorForm({
   doctor,
@@ -25,9 +20,7 @@ export function DoctorForm({
 }) {
   // master list + any linked hospital that is not in the list (inactive etc.)
   const options: Hospital[] = [...hospitals];
-  for (const h of doctor?.hospitals ?? [])
-    if (!options.some((o) => o.id === h.id)) options.push(h);
-  const linked = new Set((doctor?.hospitals ?? []).map((h) => h.id));
+  for (const h of doctor?.hospitals ?? []) if (!options.some((o) => o.id === h.id)) options.push(h);
   return (
     <form action={saveDoctorAction} className="flex flex-col gap-4">
       {doctor && <input type="hidden" name="id" value={doctor.id} />}
@@ -44,9 +37,7 @@ export function DoctorForm({
             <button formAction={saveDoctorThenConsentAction} className="btn-secondary">
               {el.customer.consent}
             </button>
-            <button className="btn-primary">
-              {el.app.save}
-            </button>
+            <button className="btn-primary">{el.app.save}</button>
           </div>
         }
       >
@@ -54,35 +45,17 @@ export function DoctorForm({
       </PageTitle>
 
       <div className="card p-4 flex flex-col gap-4">
-        <p className="text-sm font-semibold text-[var(--muted)]">
-          {el.customer.doctorDetails}
-        </p>
+        <p className="text-sm font-semibold text-[var(--muted)]">{el.customer.doctorDetails}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label={el.customer.firstName} required>
-            <input
-              name="firstName"
-              className="input"
-              defaultValue={doctor?.firstName}
-              placeholder="Μαρία"
-            />
+            <input name="firstName" className="input" defaultValue={doctor?.firstName} placeholder="Μαρία" />
           </Field>
           <Field label={el.customer.lastName} required>
-            <input
-              name="lastName"
-              className="input"
-              defaultValue={doctor?.lastName}
-              placeholder="Ιωάννου"
-            />
+            <input name="lastName" className="input" defaultValue={doctor?.lastName} placeholder="Ιωάννου" />
           </Field>
           <Field label={el.customer.mobile} required>
-            <input
-              name="mobile"
-              className="input"
-              inputMode="tel"
-              defaultValue={doctor?.mobile}
-              placeholder="69…"
-            />
+            <input name="mobile" className="input" inputMode="tel" defaultValue={doctor?.mobile} placeholder="69…" />
           </Field>
           <Field label={el.customer.email} required>
             <input
@@ -96,19 +69,11 @@ export function DoctorForm({
         </div>
 
         <Field label={el.customer.activityType} required>
-          <Radios
-            name="activityType"
-            options={entries(el.enums.activityType)}
-            defaultValue={doctor?.activityType}
-          />
+          <Radios name="activityType" options={entries(el.enums.activityType)} defaultValue={doctor?.activityType} />
         </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field
-            label={el.customer.clinicAddress}
-            required
-            className="sm:col-span-2"
-          >
+          <Field label={el.customer.clinicAddress} required className="sm:col-span-2">
             <input
               name="clinicAddress"
               className="input"
@@ -117,12 +82,7 @@ export function DoctorForm({
             />
           </Field>
           <Field label={el.customer.city} required>
-            <input
-              name="city"
-              className="input"
-              defaultValue={doctor?.city}
-              placeholder="Λιβαδειά"
-            />
+            <input name="city" className="input" defaultValue={doctor?.city} placeholder="Λιβαδειά" />
           </Field>
           <Field label={el.customer.postalCode} required>
             <input
@@ -138,46 +98,22 @@ export function DoctorForm({
               {el.customer.hospital}
               <span className="text-danger-500"> *</span>
             </span>
-            {options.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">
-                {el.customer.noHospitals}
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {options.map((h) => (
-                  <label key={h.id} className="chip">
-                    <input
-                      type="checkbox"
-                      name="hospitalId"
-                      value={h.id}
-                      defaultChecked={linked.has(h.id)}
-                    />
-                    <input
-                      type="hidden"
-                      name={`hospitalName_${h.id}`}
-                      value={h.name}
-                    />
-                    <span>{h.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <HospitalPicker options={options} defaultValue={doctor?.hospitals ?? []} />
           </div>
-          <Field label={el.customer.afm} required>
-            <input
-              name="afm"
-              className="input"
-              inputMode="numeric"
-              defaultValue={doctor?.afm}
-              placeholder="0602…"
-            />
+          <Field label={el.customer.afm} required className="sm:col-span-2">
+            <AfmField defaultValue={doctor?.afm} />
           </Field>
           <Field label={el.customer.rank} required className="sm:col-span-2">
-            <Select name="rank" defaultValue={doctor?.rank ?? ""} options={[{ value: "", label: el.customer.rankSelect }, ...entries(el.enums.rank).map(([v, l]) => ({ value: v, label: l }))]} />
+            <Select
+              name="rank"
+              defaultValue={doctor?.rank ?? ""}
+              options={[
+                { value: "", label: el.customer.rankSelect },
+                ...entries(el.enums.rank).map(([v, l]) => ({ value: v, label: l })),
+              ]}
+            />
           </Field>
         </div>
-
-        <Notice tone="amber">{el.app.required}</Notice>
       </div>
     </form>
   );

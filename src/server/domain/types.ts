@@ -31,7 +31,7 @@ export interface Doctor {
   clinicAddress: string;
   city: string;
   postalCode: string;
-  /** Linked hospitals (SoftOne detail CCCTRDHSPTL → master CCCHSPTL) */
+  /** Linked hospitals (SoftOne detail CCCTRDTRDR: TRDREL = the hospital's TRDR) */
   hospitals: HospitalRef[];
   afm: string;
   rank?: DoctorRank;

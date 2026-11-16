@@ -122,6 +122,8 @@ export const el = {
     postalCode: "ΤΚ",
     hospital: "Νοσοκομείο",
     noHospitals: "Δεν υπάρχουν διαθέσιμα νοσοκομεία.",
+    addHospital: "Προσθήκη νοσοκομείου…",
+    removeHospital: "Αφαίρεση",
     afm: "ΑΦΜ",
     rank: "Βαθμός",
     rankSelect: "Επιλέξτε…",

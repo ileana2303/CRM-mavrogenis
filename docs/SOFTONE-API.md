@@ -37,13 +37,13 @@ response `objs[0].REFID`** — it differs per user). The CRM keeps the clientID 
 
 ## 2. `api.crm.customers` ✔ — doctors are TRDR (SODTYPE 13), field names as in your script
 Row (list ✔): `{ trdr, code, name, afm, email, phone01, phone02, mobilePhone (TRDEXTRA.VARCHAR03), isDoctor, guid }`
-Row (getData ✔): + `actType (CCCACTTYPE), dRank (CCCDRANK id), hospitals[{ccchsptl, code, name, isActive, linenum}]`
+Row (getData ✔): + `actType (CCCACTTYPE), dRank (CCCDRANK id), hospitals[{trdr, trdRel, trdRel_customer_code, trdRel_customer_name, linenum}]` (detail CCCTRDTRDR; trdRel = the hospital's TRDR)
 
 | fn | params | note |
 |---|---|---|
 | `list` ✔ | `q, name, afm, email, phone01, phone02, mobilePhone, isDoctor, page, pageSize` | **please add to the row**: `firstName, lastName, address, city, zip, salesman, dRank, insDate, updDate` ✔ (done). Escape `'` in the LIKE values (`replace(/'/g,"''")`) — the CRM sends user input. |
 | `getData` ✔ | `trdr` | **please add the same columns as `list`** (`firstName, lastName, address, city, zip, salesman, insDate, updDate`) plus `dRankCode (CCCDRANK.code)` — today getData returns fewer fields than list |
-| ~~`save`~~ | — | **Not needed.** The CRM writes doctors with standard `setData` on object `CUSTOMER`: tables `CUSTOMER` (NAME, CCCFNAME, CCCLNAME, AFM, EMAIL, ADDRESS, CITY, ZIP, CCCACTTYPE, CCCDRANK, CCCISDOCTOR=1) and `CUSEXTRA` (VARCHAR03 = mobile). Hospitals: detail `CCCTRDHSPTL` `[{CCCHSPTL, LINENUM}]` with the general detail rules. `SALESMAN` = PRSN id. |
+| ~~`save`~~ | — | **Not needed.** The CRM writes doctors with standard `setData` on object `CUSTOMER`: tables `CUSTOMER` (NAME, CCCFNAME, CCCLNAME, AFM, EMAIL, ADDRESS, CITY, ZIP, CCCACTTYPE, CCCDRANK, CCCISDOCTOR=1) and `CUSEXTRA` (VARCHAR03 = mobile). Hospitals: detail `CCCTRDTRDR` `[{TRDREL, LINENUM}]` (TRDREL = hospital TRDR) with the general detail rules. `SALESMAN` = PRSN id. |
 | `getConsent` | `trdr` | `{ id, trdr, signername, signature (base64 png), chemail, chsms, chphone, chviber, signedat, userid }` |
 | `saveConsent` | same fields, no id | `{ id }` |
 
@@ -56,10 +56,10 @@ Values: `actType` plain int 1 Ιδιώτης / 2 Δημόσιος ✔; `dRankCod
 
 Read ✔: `api.crm.customers/getData` returns `signatures: [{ name: "SIGNATURE_<signer>_<unix ms>.png", sofname, crtDate (Greek local time, no zone), sodata: <base64> }]` (verified 2026-11-10 on 34583, 97 KB). The CRM takes the newest by the timestamp in the file name and shows signer + date from it. Note: every `getData` now carries the full PNGs — if that gets heavy, add a `withSignatures` flag or return `sodata` only on request. The consent **channels** (email / sms / τηλέφωνο / viber) have no SoftOne field yet — your call where they go.
 
-## 3. `api.crm/hospitals` ✔ — the CCCHSPTL master
+## 3. `api.crm/hospitals` ✔ — hospitals = TRDR of the hospital category
 | fn | params | row |
 |---|---|---|
-| `hospitals` ✔ | `q?` | `{ ccchsptl, code, name, isActive, guid }` — written to doctors via the CCCTRDHSPTL detail of CUSTOMER (form `_CRM_`) |
+| `hospitals` ✔ | `q?` | `{ trdr, code, name, isActive? }` (shape assumed 2026-11-16) — linked to doctors via the CCCTRDTRDR detail of CUSTOMER (TRDREL, form `_CRM_`) |
 
 ## 4–6. Activities — DECIDED 2026-11-10: they live in **SOACTION** (objects SOMEETING, SOCALL, SOEMAIL, SOTASK, SOACTION)
 

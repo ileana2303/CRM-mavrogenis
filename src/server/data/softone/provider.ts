@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -289,9 +289,9 @@ export const softOneProvider: DataProvider = {
       const res = await js<S1ProductRow[]>("api.crm.products", "list", { q: term?.trim() || undefined, page: 1, pageSize: 200 });
       return (res.data ?? []).map(rowToProduct);
     },
-    // hospitals master: api.crm/hospitals → { ccchsptl, code, name, isActive }
+    // hospitals master: api.crm/hospitals → TRDR rows of the hospital category { trdr, code, name, isActive? }
     async listHospitals(term) {
-      const res = await js<Array<{ ccchsptl: string | number; code?: string; name?: string; isActive?: string | number }>>("api.crm", "hospitals", term?.trim() ? { q: term.trim() } : {});
+      const res = await js<S1HospitalRow[]>("api.crm", "hospitals", term?.trim() ? { q: term.trim() } : {});
       return (res.data ?? []).filter((h) => String(h.isActive ?? "1") !== "0").map(rowToHospital);
     },
     // api.crm/bootstrap → machine: { categories, marks, models } (owner, 2026-11-11)

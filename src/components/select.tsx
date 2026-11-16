@@ -19,6 +19,10 @@ export interface SelectOption {
   hint?: string;
 }
 
+/** search key: lower case, no accents/diaeresis, final ς = σ (so «ευαγγελισμος» finds «ΕΥΑΓΓΕΛΙΣΜΟΣ») */
+const fold = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ς/g, "σ");
+
 interface Props {
   options: SelectOption[];
   /** form field name – a hidden input carries the value, so the control works in plain server-action forms */
@@ -83,11 +87,9 @@ export function Select({
   const withSearch = searchable ?? options.length > 7;
   const current = options.find((o) => o.value === selected);
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = fold(query.trim());
     return q
-      ? options.filter((o) =>
-          `${o.label} ${o.hint ?? ""}`.toLowerCase().includes(q),
-        )
+      ? options.filter((o) => fold(`${o.label} ${o.hint ?? ""}`).includes(q))
       : options;
   }, [options, query]);
 
