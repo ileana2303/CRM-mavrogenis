@@ -23,6 +23,18 @@ type Line = {
   by: "discount" | "discountValue" | "value";
 };
 
+/** What the form around the lines needs: the save gate, the leave question and the totals bar. */
+export type OfferLinesStatus = {
+  /** SoftOne has not answered for the current lines yet (save waits) */
+  busy: boolean;
+  /** at least one product chosen */
+  dirty: boolean;
+  /** lines with a product */
+  count: number;
+  calc: OfferCalc | null;
+  calcError: string | null;
+};
+
 /** Greek-typed field → number ("4.714,29" → 4714.29); empty / unreadable = 0 */
 const num = (v: string) => parseGr(v) ?? 0;
 /** decimals each field shows (Greek format: "4.714,286", "4,2424", "4.514,29") */
@@ -30,15 +42,23 @@ const DECIMALS = { qty: 3, price: 6, discount: 4, discountValue: 2, value: 2 } a
 type NumField = keyof typeof DECIMALS;
 const blank = (key: number): Line => ({ key, product: null, qty: "1", price: "", manual: false, discount: "", discountValue: "", value: "", by: "discount" });
 
-
 /**
  * Lines of a new offer → hidden input `lines` = [{ mtrl, qty, price | null, discountPct | discountValue | lineValue }]
  * (SALDOC ITELINES). Numbers are typed and shown the Greek way ("4.714,29", see lib/gr-number).
  * Every change asks SoftOne `calculate` (same payload as the save, nothing stored): a line without a typed price
  * gets SoftOne's price (its pricing rules for this customer), and value / VAT / totals shown are SoftOne's.
  * On save a SoftOne-priced line is sent without PRICE, so the saved document matches the preview.
+ * The totals live in the form's bottom bar (`onStatus`), not here.
  */
-export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; projectId: string }) {
+export function OfferLinesEditor({
+  doctorId,
+  projectId,
+  onStatus,
+}: {
+  doctorId: string;
+  projectId: string;
+  onStatus?: (s: OfferLinesStatus) => void;
+}) {
   const next = useRef(1);
   const [lines, setLines] = useState<Line[]>([blank(0)]);
   const [calc, setCalc] = useState<OfferCalc | null>(null);
@@ -72,12 +92,19 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
     [lines],
   );
   const signature = JSON.stringify(payload);
+  /** the payload SoftOne last answered for (success or error) – differs from `signature` while a calculate is due */
+  const [answered, setAnswered] = useState<string>(JSON.stringify([]));
+  const busy = payload.length > 0 && (calculating || answered !== signature);
+  useEffect(() => {
+    onStatus?.({ busy, dirty: payload.length > 0, count: payload.length, calc: payload.length ? calc : null, calcError });
+  }, [busy, payload.length, calc, calcError, onStatus]);
 
   // ask SoftOne after a short pause; only the latest answer counts
   useEffect(() => {
     if (payload.length === 0) {
       setCalc(null);
       setCalcError(null);
+      setAnswered(signature);
       return;
     }
     const mine = ++seq.current;
@@ -85,13 +112,14 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
       startCalc(async () => {
         const r = await calculateProjectOfferAction({ doctorId, projectId, lines: payload });
         if (mine !== seq.current) return;
+        setAnswered(signature);
         if ("error" in r) {
           setCalcError(r.error);
           return;
         }
         setCalcError(null);
         setCalc(r);
-        // show SoftOne's answer in the fields the salesperson did not type: price, and the discount or the value
+        // show SoftOne's answer in the fields the salesperson did not type: price, and two of %, € and value
         setLines((ls) => {
           let i = 0;
           return ls.map((l) => {
@@ -117,133 +145,171 @@ export function OfferLinesEditor({ doctorId, projectId }: { doctorId: string; pr
     if (!l.product || !calc) return null;
     return calc.lines[priced.findIndex((x) => x.key === l.key)] ?? null;
   };
+  /** SoftOne-filled field: dashed, muted (the typed one keeps the solid border) */
+  const derived = (yes: boolean) => (yes ? "border-dashed text-[var(--muted)] bg-white/50" : "");
 
   return (
     <div className="flex flex-col gap-3">
       <input type="hidden" name="lines" value={signature} />
+      {/* cards are not overflow-hidden (that clipped the product results); the line being searched sits above the cards below */}
       {lines.map((l, i) => {
         const c = calcFor(l);
+        const pending = l.product && (!c || answered !== signature);
         return (
-          <div key={l.key} className="card p-3 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[0.7fr_1fr_0.8fr_1fr_1.25fr_1.15fr] items-end">
-            <div className="col-span-full flex items-end gap-2">
+          <section key={l.key} className={`card relative ${l.product ? "" : "z-40"}`} aria-label={`Είδος ${i + 1}`}>
+            {/* header: number, product, line value, remove */}
+            <div className="flex items-start gap-3 p-3 sm:p-4">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-brand-50 text-sm font-bold text-brand-700 tabular-nums">
+                {i + 1}
+              </span>
               <div className="min-w-0 flex-1">
-                <span className="label">Είδος {i + 1}</span>
-                <ProductSearch value={l.product} onPick={(p) => update(l.key, { product: p, price: "", manual: false, discountValue: "", value: "", by: "discount" })} />
+                {l.product ? (
+                  <>
+                    <p className="font-semibold leading-snug line-clamp-2">{l.product.name}</p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--muted)]">
+                      <span className="font-mono">{l.product.code}</span>
+                      {c && <span className="badge bg-slate-100 text-slate-700">ΦΠΑ {c.vatPct}%</span>}
+                      {l.manual ? (
+                        <span className="badge bg-amber-100 text-amber-800">Δική σας τιμή</span>
+                      ) : (
+                        <span className="badge bg-brand-50 text-brand-700">Τιμή SoftOne</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => update(l.key, { product: null, price: "", manual: false, discount: "", discountValue: "", value: "", by: "discount" })}
+                        className="text-brand-700 font-medium hover:underline"
+                      >
+                        Αλλαγή είδους
+                      </button>
+                    </p>
+                  </>
+                ) : (
+                  <ProductSearch onPick={(p) => update(l.key, { product: p, price: "", manual: false, discountValue: "", value: "", by: "discount" })} />
+                )}
               </div>
+              {l.product && (
+                <div className="shrink-0 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--muted)]">Αξία γραμμής</p>
+                  <p className={`text-lg font-bold tabular-nums whitespace-nowrap transition-opacity ${pending ? "opacity-40" : ""}`}>
+                    {c ? fmtEur(c.lineValue, true) : "…"}
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
                 aria-label={`Αφαίρεση είδους ${i + 1}`}
                 disabled={lines.length === 1}
                 onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
-                className="btn-ghost min-h-11 disabled:opacity-30"
+                className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-red-50 hover:text-red-700 disabled:opacity-30"
               >
                 <Icon.x size={18} />
               </button>
             </div>
-            <label className="block">
-              <span className="label">Ποσότητα</span>
-              <input className="input tabular-nums" inputMode="decimal" value={l.qty} onChange={(e) => update(l.key, { qty: cleanNumberInput(e.target.value), by: "discount" })} onBlur={() => tidy(l.key, "qty")} />
-            </label>
-            <div>
-              <span className="label">{l.manual ? "Τιμή (δική σας)" : "Τιμή SoftOne"}</span>
-              <div className="relative">
-                <input
-                  className={`input tabular-nums ${l.manual ? "pr-10" : ""}`}
-                  inputMode="decimal"
-                  value={l.price}
-                  placeholder={l.product ? "…" : ""}
-                  disabled={!l.product}
-                  onChange={(e) => update(l.key, { price: cleanNumberInput(e.target.value), manual: true, by: "discount" })}
-                  onBlur={() => tidy(l.key, "price")}
-                />
-                {l.manual && (
-                  <button
-                    type="button"
-                    title="Επαναφορά τιμής SoftOne"
-                    aria-label="Επαναφορά τιμής SoftOne"
-                    onClick={() => update(l.key, { manual: false, price: "", by: "discount" })}
-                    className="absolute inset-y-0 right-1 grid w-9 place-items-center rounded-lg text-brand-700 hover:bg-brand-50"
+
+            {/* figures */}
+            {l.product && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[0.7fr_1fr_0.8fr_1fr_1.2fr_1.1fr] gap-3 border-t border-[var(--line)] bg-brand-50/30 rounded-b-2xl p-3 sm:p-4">
+                <Num label="Ποσότητα">
+                  <input
+                    className="input tabular-nums"
+                    inputMode="decimal"
+                    value={l.qty}
+                    onChange={(e) => update(l.key, { qty: cleanNumberInput(e.target.value), by: "discount" })}
+                    onBlur={() => tidy(l.key, "qty")}
+                  />
+                </Num>
+                <Num label="Τιμή μονάδας">
+                  <div className="relative">
+                    <input
+                      className={`input tabular-nums ${l.manual ? "pr-10" : ""}`}
+                      inputMode="decimal"
+                      value={l.price}
+                      placeholder="…"
+                      onChange={(e) => update(l.key, { price: cleanNumberInput(e.target.value), manual: true, by: "discount" })}
+                      onBlur={() => tidy(l.key, "price")}
+                    />
+                    {l.manual && (
+                      <button
+                        type="button"
+                        title="Επαναφορά τιμής SoftOne"
+                        aria-label="Επαναφορά τιμής SoftOne"
+                        onClick={() => update(l.key, { manual: false, price: "", by: "discount" })}
+                        className="absolute inset-y-0 right-1 grid w-9 place-items-center rounded-lg text-brand-700 hover:bg-brand-50"
+                      >
+                        ↺
+                      </button>
+                    )}
+                  </div>
+                </Num>
+                <Num label="Έκπτωση %">
+                  <input
+                    className={`input tabular-nums ${derived(l.by !== "discount")}`}
+                    title={l.by !== "discount" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                    inputMode="decimal"
+                    value={l.discount}
+                    onChange={(e) => update(l.key, { discount: cleanNumberInput(e.target.value), by: "discount" })}
+                    onBlur={() => tidy(l.key, "discount")}
+                  />
+                </Num>
+                <Num label="Έκπτωση €">
+                  <input
+                    className={`input tabular-nums ${derived(l.by !== "discountValue")}`}
+                    title={l.by !== "discountValue" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                    inputMode="decimal"
+                    value={l.discountValue}
+                    data-field="disc1val"
+                    onChange={(e) => update(l.key, { discountValue: cleanNumberInput(e.target.value), by: "discountValue" })}
+                    onBlur={() => tidy(l.key, "discountValue")}
+                  />
+                </Num>
+                <Num label="Αξία">
+                  <input
+                    className={`input tabular-nums font-semibold ${derived(l.by !== "value")}`}
+                    title={l.by !== "value" ? "Υπολογίστηκε από το SoftOne" : undefined}
+                    inputMode="decimal"
+                    value={l.value}
+                    placeholder="…"
+                    onChange={(e) => update(l.key, { value: cleanNumberInput(e.target.value), by: "value" })}
+                    onBlur={() => tidy(l.key, "value")}
+                  />
+                </Num>
+                <Num label={c ? `ΦΠΑ ${c.vatPct}%` : "ΦΠΑ"}>
+                  <div
+                    className="input tabular-nums border-dashed bg-white/50 text-[var(--muted)] flex items-center whitespace-nowrap overflow-hidden"
+                    aria-readonly="true"
+                    data-field="vatamnt"
                   >
-                    ↺
-                  </button>
-                )}
+                    {c ? fmtEur(c.vat, true) : "—"}
+                  </div>
+                </Num>
               </div>
-            </div>
-            <label className="block">
-              <span className="label">Έκπτωση %</span>
-              <input
-                className={`input tabular-nums ${l.by !== "discount" ? "border-dashed text-[var(--muted)]" : ""}`}
-                title={l.by !== "discount" ? "Υπολογίστηκε από το SoftOne" : undefined}
-                inputMode="decimal"
-                value={l.discount}
-                disabled={!l.product}
-                onChange={(e) => update(l.key, { discount: cleanNumberInput(e.target.value), by: "discount" })}
-                onBlur={() => tidy(l.key, "discount")}
-              />
-            </label>
-            <label className="block">
-              <span className="label">Έκπτωση €</span>
-              <input
-                className={`input tabular-nums ${l.by !== "discountValue" ? "border-dashed text-[var(--muted)]" : ""}`}
-                title={l.by !== "discountValue" ? "Υπολογίστηκε από το SoftOne" : undefined}
-                inputMode="decimal"
-                value={l.discountValue}
-                disabled={!l.product}
-                data-field="disc1val"
-                onChange={(e) => update(l.key, { discountValue: cleanNumberInput(e.target.value), by: "discountValue" })}
-                onBlur={() => tidy(l.key, "discountValue")}
-              />
-            </label>
-            <label className="block">
-              <span className="label">Αξία</span>
-              <input
-                className={`input tabular-nums font-semibold ${l.by !== "value" ? "border-dashed" : ""}`}
-                title={l.by !== "value" ? "Υπολογίστηκε από το SoftOne" : undefined}
-                inputMode="decimal"
-                value={l.value}
-                placeholder={l.product ? "…" : ""}
-                disabled={!l.product}
-                onChange={(e) => update(l.key, { value: cleanNumberInput(e.target.value), by: "value" })}
-                onBlur={() => tidy(l.key, "value")}
-              />
-            </label>
-            <div>
-              <span className="label">{c ? `ΦΠΑ ${c.vatPct}%` : "ΦΠΑ"}</span>
-              <div className="input tabular-nums bg-transparent border-dashed text-[var(--muted)] flex items-center" aria-readonly="true" data-field="vatamnt">
-                {c ? fmtEur(c.vat, true) : "—"}
-              </div>
-            </div>
-          </div>
+            )}
+          </section>
         );
       })}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <button type="button" className="btn-secondary" onClick={() => setLines((ls) => [...ls, blank(next.current++)])}>
-          <Icon.plus size={16} /> Προσθήκη είδους
-        </button>
-        <dl className="text-right tabular-nums grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 items-baseline">
-          <dt className="text-xs uppercase tracking-wide text-[var(--muted)]">Καθαρή αξία</dt>
-          <dd>{calc ? fmtEur(calc.net, true) : "—"}</dd>
-          <dt className="text-xs uppercase tracking-wide text-[var(--muted)]">ΦΠΑ</dt>
-          <dd>{calc ? fmtEur(calc.vat, true) : "—"}</dd>
-          <dt className="text-xs uppercase tracking-wide text-[var(--muted)]">Σύνολο</dt>
-          <dd className="text-xl font-bold">{calc ? fmtEur(calc.total, true) : "—"}</dd>
-          <dd className="col-span-2 text-xs text-[var(--muted)] min-h-4" aria-live="polite">
-            {calculating ? "Υπολογισμός στο SoftOne…" : calc ? "Τιμές και σύνολα από το SoftOne" : ""}
-          </dd>
-        </dl>
-      </div>
-      {calcError && (
-        <div role="status" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          Το SoftOne δεν υπολόγισε την προσφορά: {calcError}
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => setLines((ls) => [...ls, blank(next.current++)])}
+        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-200 bg-white/40 font-semibold text-brand-700 transition-colors hover:border-brand-500 hover:bg-brand-50/60"
+      >
+        <Icon.plus size={18} /> Προσθήκη είδους
+      </button>
     </div>
   );
 }
 
+function Num({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 /** Type ≥ 2 characters → api.crm.products/list {q}; shows how many matched when there are more than listed. */
-function ProductSearch({ value, onPick }: { value: ProductHit | null; onPick: (p: ProductHit | null) => void }) {
+function ProductSearch({ onPick }: { onPick: (p: ProductHit) => void }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [res, setRes] = useState<{ total: number; items: ProductHit[] } | { error: string } | null>(null);
@@ -275,27 +341,15 @@ function ProductSearch({ value, onPick }: { value: ProductHit | null; onPick: (p
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
-  if (value)
-    return (
-      <div className="input flex items-center gap-2">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{value.name}</span>
-          <span className="block text-xs text-[var(--muted)]">{value.code}</span>
-        </span>
-        <button type="button" aria-label="Αλλαγή είδους" className="btn-ghost min-h-8 px-2" onClick={() => onPick(null)}>
-          <Icon.x size={16} />
-        </button>
-      </div>
-    );
-
   return (
     <div ref={root} className="relative">
       <div className="relative">
-        <Icon.search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+        <Icon.search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
         <input
-          className="input pl-9"
+          className="input pl-10"
           value={q}
-          placeholder="Κωδικός ή περιγραφή…"
+          autoFocus
+          placeholder="Αναζήτηση είδους: κωδικός ή περιγραφή…"
           onChange={(e) => {
             setQ(e.target.value);
             setOpen(true);
@@ -308,7 +362,7 @@ function ProductSearch({ value, onPick }: { value: ProductHit | null; onPick: (p
         />
       </div>
       {open && q.trim().length >= 2 && (
-        <div className="absolute z-50 mt-1 w-full max-h-80 overflow-y-auto rounded-2xl border border-[var(--line)] bg-white/95 backdrop-blur-xl shadow-[0_18px_40px_-16px_rgba(16,36,70,0.45)] py-1">
+        <div className="absolute z-50 mt-1 w-full max-h-80 overflow-y-auto rounded-2xl border border-[var(--line)] bg-white shadow-[0_18px_40px_-16px_rgba(16,36,70,0.45)] py-1">
           {pending && !res && <div className="px-3 py-3 text-sm text-[var(--muted)]">Αναζήτηση…</div>}
           {res && "error" in res && <div className="px-3 py-3 text-sm text-red-700">{res.error}</div>}
           {res && "items" in res && res.items.length === 0 && <div className="px-3 py-3 text-sm text-[var(--muted)]">Δεν βρέθηκε είδος.</div>}
@@ -326,7 +380,7 @@ function ProductSearch({ value, onPick }: { value: ProductHit | null; onPick: (p
                 className="w-full text-left px-3 py-2 min-h-11 hover:bg-brand-50"
               >
                 <span className="block truncate">{p.name}</span>
-                <span className="block text-xs text-[var(--muted)]">{p.code}</span>
+                <span className="block text-xs text-[var(--muted)] font-mono">{p.code}</span>
               </button>
             ))}
           {res && "items" in res && res.total > res.items.length && (

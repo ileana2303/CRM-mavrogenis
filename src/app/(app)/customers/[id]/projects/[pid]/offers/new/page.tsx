@@ -1,8 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BackLink, DoctorLine, Field, PageTitle } from "@/components/ui";
-import { ActionForm } from "@/components/action-form";
-import { OfferLinesEditor } from "@/components/offer-lines-editor";
+import { NewOfferForm } from "@/components/new-offer-form";
 import { el } from "@/lib/i18n/el";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { getProjectDetail } from "@/server/services/project-service";
@@ -24,32 +21,14 @@ export default async function NewProjectOfferPage({ params }: { params: Promise<
   if (!doctor || !project || project.doctorId !== id) notFound();
 
   return (
-    <ActionForm action={createProjectOfferAction} className="flex flex-col gap-4">
-      <input type="hidden" name="doctorId" value={id} />
-      <input type="hidden" name="projectId" value={project.id} />
-      <BackLink href={back} />
-      <PageTitle
-        right={
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href={back} className="btn-ghost">
-              {el.app.cancel}
-            </Link>
-            <button className="btn-primary">{el.app.save}</button>
-          </div>
-        }
-      >
-        {el.projects.newOffer}
-      </PageTitle>
-      <DoctorLine name={doctorFullName(doctor)} />
-      <p className="text-sm text-[var(--muted)] -mt-2">
-        {el.projects.project}: <span className="font-semibold text-[var(--text)]">{project.title}</span> · {project.code}
-      </p>
-
-      <OfferLinesEditor doctorId={id} projectId={project.id} />
-
-      <Field label={el.projects.offerComments}>
-        <textarea name="comments" className="input" rows={3} />
-      </Field>
-    </ActionForm>
+    <NewOfferForm
+      action={createProjectOfferAction}
+      doctorId={id}
+      projectId={project.id}
+      backHref={back}
+      doctorName={doctorFullName(doctor)}
+      projectTitle={project.title}
+      projectCode={project.code}
+    />
   );
 }
