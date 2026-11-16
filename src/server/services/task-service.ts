@@ -1,8 +1,9 @@
+import { athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { Session } from "../auth/jwt";
 import type { Task, TaskStatusView } from "../domain/types";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => athensToday();
 
 export function taskView(t: Task): TaskStatusView {
   if (t.status === "DONE") return "DONE";

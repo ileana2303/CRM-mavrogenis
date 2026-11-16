@@ -1,14 +1,10 @@
+import { athensDatePlus, athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { DateRange } from "../data/provider";
 import type { DailyReport } from "../domain/types";
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 export function defaultRange(): DateRange {
-  const t = today();
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return { from: t, to: d.toISOString().slice(0, 10) };
+  return { from: athensToday(), to: athensDatePlus(7) };
 }
 
 /** Αναφορά Ημέρας for one salesperson – one SoftOne call (api.crm/dashboard). */

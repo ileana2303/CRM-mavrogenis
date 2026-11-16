@@ -3,6 +3,7 @@ import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { Select } from "@/components/select";
 import { fmtDate, fmtDuration, fmtTime, todayIso } from "@/lib/format";
+import { athensDatePlus } from "@/lib/athens";
 import { requireUser } from "@/server/auth/current-user";
 import { listSalespeople } from "@/server/services/auth-service";
 import { listCheckIns } from "@/server/services/checkin-service";
@@ -20,9 +21,7 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
   await requireUser(["MANAGER"]);
   if (SOON.checkInLog) return <ComingSoon title={metadata.title} />;
   const sp = await searchParams;
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const range = { from: sp.from || weekAgo.toISOString().slice(0, 10), to: sp.to || todayIso() };
+  const range = { from: sp.from || athensDatePlus(-7), to: sp.to || todayIso() };
   const salespeople = await listSalespeople();
   const rows = await listCheckIns(range, sp.user || undefined);
   const period = defaultPeriod();

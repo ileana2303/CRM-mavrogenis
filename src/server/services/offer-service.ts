@@ -1,3 +1,4 @@
+import { athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { Session } from "../auth/jwt";
 import type { Offer, OfferClosed } from "../domain/types";
@@ -71,7 +72,7 @@ export async function markOfferSent(offer: Offer, user: Session) {
   const updated = await db().offers.update(offer.id, {
     status: "SENT",
     acknowledgedAt: now(),
-    date: new Date().toISOString().slice(0, 10),
+    date: athensToday(),
   });
   await db().projects.update(offer.projectId, { lastOfferDate: updated.date, stage: "OFFER" });
   await db().projects.addEvent({

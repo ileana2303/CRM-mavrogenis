@@ -1,3 +1,5 @@
+import { TZ, athensToday } from "./athens";
+
 const eur = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const eur2 = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const num = new Intl.NumberFormat("el-GR", { maximumFractionDigits: 2 });
@@ -17,18 +19,21 @@ export function fmtPct(v: number | null | undefined) {
   return `${num.format(v)}%`;
 }
 
-/** ISO date or timestamp → ΗΗ/ΜΜ/ΕΕΕΕ */
+/** ISO instant or plain "yyyy-mm-dd" → ΗΗ/ΜΜ/ΕΕΕΕ, always as in Athens (servers run in UTC). */
 export function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
-  const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
+  const plain = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (plain) return `${plain[3]}/${plain[2]}/${plain[1]}`; // a calendar date: no zone to convert
+  const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("el-GR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function fmtTime(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString("el-GR", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
 export function fmtDateTime(iso: string | null | undefined) {
@@ -43,4 +48,5 @@ export function fmtDuration(fromIso: string, toIso?: string) {
   return `${Math.floor(mins / 60)} ώ. ${mins % 60} λ.`;
 }
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+/** Today in Athens, "yyyy-mm-dd" */
+export const todayIso = () => athensToday();

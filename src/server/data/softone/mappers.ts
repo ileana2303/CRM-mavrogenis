@@ -4,6 +4,7 @@
  */
 import { S1Error } from "./client";
 import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -55,11 +56,18 @@ function splitName(name: string): { firstName: string; lastName: string } {
   return { lastName: parts[0], firstName: parts.slice(1).join(" ") };
 }
 
+/**
+ * SoftOne date/time → ISO instant. SoftOne sends Athens wall-clock time with no zone ("2026-10-24 09:30:00",
+ * "2026-10-24T09:30", "2026-10-24"), so it is read as Europe/Athens (it used to be taken as UTC: +2/+3h, and
+ * anything after ~22:00 showed as the next day). A value that already carries a zone is kept as it is.
+ */
 export function s1Date(v?: string | null): string {
   if (!v) return "";
-  // SoftOne gives "2026-10-24 09:30:00" or "2026-10-24T09:30:00"
-  const s = String(v).replace(" ", "T");
-  return s.length === 10 ? `${s}T00:00:00.000Z` : s.endsWith("Z") ? s : `${s}Z`;
+  const s = String(v).trim();
+  if (/(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s;
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
+  if (!m) return s; // unknown shape: shown as SoftOne sent it, never a made-up date
+  return athensToIso(+m[1], +m[2], +m[3], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0));
 }
 
 export function rowToDoctor(r: S1CustomerRow): Doctor {
@@ -472,16 +480,9 @@ export function s1DateTime(iso: string | Date): string {
 /** SoftOne "yyyy-mm-dd hh:mm[:ss]" (Greek local time) → ISO string. */
 export function s1DateTimeToIso(v?: string | null): string | undefined {
   if (!v) return undefined;
-  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(v);
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(v);
   if (!m) return undefined;
-  // find the Athens UTC offset for that instant (DST-aware) by probing
-  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-  const offsetMin = (t: number) => {
-    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date(t));
-    const g = (k: string) => +(p.find((x) => x.type === k)?.value ?? 0);
-    return (Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute")) - t) / 60000;
-  };
-  return new Date(guess - offsetMin(guess) * 60000).toISOString();
+  return athensToIso(+m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] ?? 0));
 }
 
 /**

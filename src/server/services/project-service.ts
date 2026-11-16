@@ -1,3 +1,4 @@
+import { athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { Session } from "../auth/jwt";
 import type {
@@ -12,7 +13,7 @@ import type {
 } from "../domain/types";
 import { offerPrice, sum } from "./pricing";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => athensToday();
 const now = () => new Date().toISOString();
 const pad4 = (n: number) => String(n).padStart(4, "0");
 

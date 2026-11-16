@@ -1,3 +1,4 @@
+import { athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { Visit } from "../domain/types";
 import type { Session } from "../auth/jwt";
@@ -12,7 +13,7 @@ export async function recordVisit(doctorId: string, input: VisitInput, user: Ses
   const visit = await db().visits.create({
     doctorId,
     userId: user.userId,
-    date: new Date().toISOString().slice(0, 10),
+    date: athensToday(),
     ...input,
     nextActionDate: input.nextActionDate || undefined,
     projectId: input.projectId || undefined,
