@@ -3,6 +3,7 @@ import type { Session } from "../auth/jwt";
 import type {
   FollowUp,
   NewS1Project,
+  NewS1Offer,
   Offer,
   OfferLine,
   Project,
@@ -64,6 +65,23 @@ export function getProjectDetail(id: string) {
 /** Stage change from the project screen → PRJC.PRJSTATE */
 export function setProjectState(id: string, stateId: string) {
   return db().projects.setState(id, stateId);
+}
+
+/** «Νέα προσφορά» inside a project: SALDOC in the offer series, owned by the session PRSN. */
+export function createOfferForProject(input: NewS1Offer, user: Session) {
+  if (!user.s1Prsn) throw new Error("Η σύνδεση δεν έχει PRSN πωλητή· αποσυνδεθείτε και συνδεθείτε ξανά.");
+  if (input.lines.length === 0) throw new Error("Προσθέστε τουλάχιστον ένα είδος.");
+  return db().offers.createForProject(input, user.s1Prsn);
+}
+
+/** SoftOne's prices / VAT / totals for an offer draft (calculate – nothing saved). */
+export function calculateOfferForProject(input: NewS1Offer, user: Session) {
+  if (!user.s1Prsn) throw new Error("Η σύνδεση δεν έχει PRSN πωλητή· αποσυνδεθείτε και συνδεθείτε ξανά.");
+  return db().offers.calculateForProject(input, user.s1Prsn);
+}
+
+export function searchProducts(q: string, limit = 20) {
+  return db().stats.searchProducts(q, limit);
 }
 
 export function projectLookups() {

@@ -216,6 +216,38 @@ export interface ProjectDetail extends ProjectSummary {
   offers: ProjectOffer[];
 }
 
+/** A product found by api.crm.products/list {q} for an offer line */
+export interface ProductHit {
+  mtrl: string;
+  code: string;
+  name: string;
+  price: number;
+}
+
+/** One line of a new offer → SALDOC ITELINES. `price` null = let SoftOne price it (its rules, as `calculate` showed). */
+export interface NewS1OfferLine {
+  mtrl: string;
+  qty: number;
+  price: number | null;
+  discountPct: number;
+}
+
+/** SoftOne's `calculate` on an offer draft: per line (same order as sent) and document totals */
+export interface OfferCalc {
+  lines: Array<{ price: number; discountPct: number; lineValue: number; vat: number; vatPct: number }>;
+  net: number;
+  vat: number;
+  total: number;
+}
+
+/** «Νέα προσφορά» inside a project → setData SALDOC form _CRM_ (owner, 2026-11-16) */
+export interface NewS1Offer {
+  doctorId: string;
+  projectId: string;
+  comments: string;
+  lines: NewS1OfferLine[];
+}
+
 /** «Νέο Project» → setData PRJC form _CRM_ (owner, 2026-11-16) */
 export interface NewS1Project {
   doctorId: string;

@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -278,6 +278,47 @@ export function projectToSetData(p: NewS1Project, salesmanId?: string): Record<s
       },
     ],
   };
+}
+
+/**
+ * New offer inside a project → setData SALDOC, form _CRM_ (owner, 2026-11-16): SERIES first, then TRDR / PRJC / SALESMAN.
+ * Lines → ITELINES {MTRL, QTY1, PRICE, DISC1PRC}, new lines numbered 9000001…; SoftOne prices VAT and totals.
+ */
+export function projectOfferToSetData(o: NewS1Offer, series: number, salesmanId: string): Record<string, Array<Record<string, unknown>>> {
+  return {
+    SALDOC: [
+      {
+        SERIES: series,
+        TRDR: Number(o.doctorId),
+        PRJC: Number(o.projectId),
+        SALESMAN: Number(salesmanId),
+        ...(o.comments ? { COMMENTS: o.comments } : {}),
+      },
+    ],
+    ITELINES: o.lines.map((l, i) => ({
+      LINENUM: 9000001 + i,
+      MTRL: Number(l.mtrl),
+      QTY1: l.qty,
+      ...(l.price !== null ? { PRICE: l.price } : {}),
+      ...(l.discountPct ? { DISC1PRC: l.discountPct } : {}),
+    })),
+  };
+}
+
+/** calculate SALDOC → OfferCalc; lines come back with the LINENUM we sent (9000001 + index) */
+export function calcToOffer(data: Record<string, Array<Record<string, string>>>, lineCount: number): OfferCalc {
+  const n = (v: string | undefined) => {
+    const x = Number(v ?? 0);
+    return Number.isFinite(x) ? x : 0;
+  };
+  const byIndex = new Map((data.ITELINES ?? []).map((r) => [Number(r.LINENUM) - 9000001, r]));
+  const lines = Array.from({ length: lineCount }, (_, i) => {
+    const r = byIndex.get(i);
+    if (!r) throw new Error(`calculate SALDOC: line ${i + 1} missing from the answer`);
+    return { price: n(r.PRICE), discountPct: n(r.DISC1PRC), lineValue: n(r.LINEVAL), vat: n(r.VATAMNT), vatPct: n(r.VAT_VAT_PERCNT) };
+  });
+  const h = data.SALDOC?.[0] ?? {};
+  return { lines, net: n(h.NETAMNT), vat: n(h.VATAMNT), total: n(h.SUMAMNT) };
 }
 
 // ---- products (api.crm.products) --------------------------------------------

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
-import type { FollowUpContactMethod, FollowUpResult, NextAction, ProjectType } from "@/server/domain/types";
-import { addFollowUp, closeProject, createProject, createProjectForDoctor, getProject, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
+import type { FollowUpContactMethod, FollowUpResult, NextAction, OfferCalc, ProductHit, ProjectType } from "@/server/domain/types";
+import { addFollowUp, closeProject, createProject, createProjectForDoctor, calculateOfferForProject, createOfferForProject, getProject, searchProducts, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
 import { getOffer, markOfferSent } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -177,3 +177,63 @@ export async function setProjectStateAction(fd: FormData): Promise<ActionResult>
   revalidatePath(`/customers/${doctorId}/projects`);
   redirect(`/customers/${doctorId}/projects/${projectId}?saved=state`);
 }
+
+/** Product search for an offer line (api.crm.products/list {q}); at least 2 characters. */
+export async function searchProductsAction(q: string): Promise<{ total: number; items: ProductHit[] } | { error: string }> {
+  await requireUser();
+  const term = String(q ?? "").trim();
+  if (term.length < 2) return { total: 0, items: [] };
+  try {
+    return await searchProducts(term, 20);
+  } catch (e) {
+    console.error("[projects] product search failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+const offerLinesSchema = z.array(
+  z.object({
+    mtrl: z.string().min(1),
+    qty: z.number().positive(),
+    price: z.number().nonnegative().nullable(),
+    discountPct: z.number().min(0).max(100),
+  }),
+);
+
+/** Preview: SoftOne `calculate` on the draft (same payload as the save) → prices, VAT, totals. Nothing is saved. */
+export async function calculateProjectOfferAction(input: {
+  doctorId: string;
+  projectId: string;
+  lines: unknown;
+}): Promise<OfferCalc | { error: string }> {
+  const user = await requireUser();
+  const parsed = offerLinesSchema.safeParse(input.lines);
+  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%." };
+  if (parsed.data.length === 0) return { lines: [], net: 0, vat: 0, total: 0 };
+  try {
+    return await calculateOfferForProject({ doctorId: input.doctorId, projectId: input.projectId, comments: "", lines: parsed.data }, user);
+  } catch (e) {
+    console.error("[projects] calculate offer failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** «Νέα προσφορά» inside a project → setData SALDOC (offer series, PRJC, SALESMAN = session PRSN) + ITELINES. */
+export async function createProjectOfferAction(fd: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const projectId = str(fd, "projectId");
+  const parsed = offerLinesSchema.safeParse(JSON.parse(str(fd, "lines") || "[]"));
+  if (!parsed.success) return { error: "Ελέγξτε τις γραμμές: είδος, ποσότητα > 0, τιμή ≥ 0, έκπτωση 0–100%." };
+  if (parsed.data.length === 0) return { error: "Προσθέστε τουλάχιστον ένα είδος." };
+  try {
+    await createOfferForProject({ doctorId, projectId, comments: str(fd, "comments"), lines: parsed.data }, user);
+  } catch (e) {
+    console.error("[projects] create offer failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  revalidatePath(`/customers/${doctorId}/projects/${projectId}`);
+  revalidatePath(`/customers/${doctorId}/offers`);
+  redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer`);
+}
+

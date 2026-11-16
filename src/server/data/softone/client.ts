@@ -90,6 +90,11 @@ export class S1Client {
     return this.service<{ data: T }>("getData", { clientID, object, ...(form ? { form } : {}), key, ...(locateinfo ? { locateinfo } : {}) });
   }
 
+  /** Standard calculate: runs SoftOne's pricing / totals on a draft without saving; answers like getData. */
+  calculate<T = Record<string, Array<Record<string, string>>>>(clientID: string, object: string, data: Record<string, Array<Record<string, unknown>>>, form?: string, key?: string | number) {
+    return this.service<{ data: T }>("calculate", { clientID, object, ...(form ? { form } : {}), ...(key !== undefined ? { key } : {}), data });
+  }
+
   /** Standard setData: insert (no key) or update (key) an object; returns the record id. */
   setData(clientID: string, object: string, data: Record<string, Array<Record<string, unknown>>>, key?: string | number, form?: string) {
     return this.service<{ id: string }>("setData", { clientID, object, ...(form ? { form } : {}), ...(key !== undefined ? { key } : {}), data });

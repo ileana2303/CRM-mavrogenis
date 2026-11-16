@@ -20,6 +20,9 @@ import type {
   ProjectSummary,
   ProjectDetail,
   NewS1Project,
+  NewS1Offer,
+  OfferCalc,
+  ProductHit,
   ProjectLookups,
   SalesTurnover,
   Target,
@@ -104,6 +107,10 @@ export interface OffersRepo {
   findById(id: string): Promise<Offer | null>;
   create(o: NewEntity<Offer>): Promise<Offer>;
   update(id: string, patch: Partial<Offer>): Promise<Offer>;
+  /** setData SALDOC form _CRM_: SERIES = offer series, TRDR, PRJC, SALESMAN + ITELINES → the new FINDOC */
+  createForProject(o: NewS1Offer, salesmanId: string): Promise<{ id: string }>;
+  /** calculate SALDOC form _CRM_ with the same payload as createForProject – nothing is saved */
+  calculateForProject(o: NewS1Offer, salesmanId: string): Promise<OfferCalc>;
 }
 
 export interface TasksRepo {
@@ -127,6 +134,8 @@ export interface StatsRepo {
   /** machine categories / marks / models for the equipment editor */
   machineCatalog(): Promise<MachineCatalog>;
   projectLookups(): Promise<ProjectLookups>;
+  /** api.crm.products/list {q}: the first `limit` matches and how many there are in all */
+  searchProducts(q: string, limit: number): Promise<{ total: number; items: ProductHit[] }>;
   findProduct(code: string): Promise<Product | null>;
   doctorHistory(doctorId: string): Promise<DoctorYearStat[]>;
   target(userId: string, year: number, month: number): Promise<Target | null>;

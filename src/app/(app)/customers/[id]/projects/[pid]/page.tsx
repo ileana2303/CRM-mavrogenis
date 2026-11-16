@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, BackLink, Card, DoctorLine, Empty, Field, Notice, PageTitle } from "@/components/ui";
 import { Select } from "@/components/select";
@@ -43,6 +44,7 @@ export default async function ProjectViewPage({
       <PageTitle right={project.state.name ? <Badge tone="blue">{project.state.name}</Badge> : null}>{project.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
       {saved === "state" && <Notice tone="green">{el.projects.stateSaved}</Notice>}
+      {saved === "offer" && <Notice tone="green">{el.projects.offerSaved}</Notice>}
 
       <Card>
         <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -92,7 +94,18 @@ export default async function ProjectViewPage({
         </ActionForm>
       </Card>
 
-      <Card title={el.projects.offersTitle}>
+      <Card
+        title={
+          <span className="flex items-center justify-between gap-3">
+            <span>{el.projects.offersTitle}</span>
+            {!SOON.projectOffer && (
+              <Link href={`/customers/${id}/projects/${project.id}/offers/new`} className="btn-primary normal-case tracking-normal text-sm">
+                + {el.projects.newOffer}
+              </Link>
+            )}
+          </span>
+        }
+      >
         {project.offers.length === 0 ? (
           <Empty>{el.projects.noOffers}</Empty>
         ) : (

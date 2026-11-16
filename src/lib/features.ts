@@ -6,6 +6,7 @@ export const SOON = {
   visits: true, // visits.* – Καταγραφή επίσκεψης
   projectCreate: false, // projects.createForDoctor – «Νέο Project» (setData PRJC, form _CRM_)
   projectList: false,
+  projectOffer: false, // offers.createForProject – «Νέα προσφορά» inside a project (setData SALDOC _CRM_)
   projectDetail: false, // projects.detail – project screen (getData PRJC _CRM_): header + offers // projects.summariesByDoctor – a doctor's project list (api.crm.customers/projects)
   projects: true, // project detail / new / close / revise / follow-up, offers.create/update – need stage, value, lines, events
   history: true, // stats.doctorHistory – Ιστορικό πελάτη

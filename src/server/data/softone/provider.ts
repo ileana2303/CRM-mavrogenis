@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -260,6 +260,17 @@ export const softOneProvider: DataProvider = {
       const res = await js<S1OfferRow[]>("api.crm.offers", "list", { trdr: Number(doctorId), page: 1, pageSize: 200 });
       return (res.data ?? []).map(rowToOffer).sort((a, b) => b.date.localeCompare(a.date));
     },
+    async createForProject(o, salesmanId) {
+      const cid = await clientId();
+      const res = await s1.setData(cid, "SALDOC", projectOfferToSetData(o, offerSeries(), salesmanId), undefined, CRM_FORM);
+      if (!res.id) throw new S1Error("setData SALDOC returned no id");
+      return { id: String(res.id) };
+    },
+    async calculateForProject(o, salesmanId) {
+      const cid = await clientId();
+      const res = await s1.calculate(cid, "SALDOC", projectOfferToSetData(o, offerSeries(), salesmanId), CRM_FORM);
+      return calcToOffer(res.data ?? {}, o.lines.length);
+    },
     async listByProject(projectId) {
       const res = await js<S1OfferRow[]>("api.crm.offers", "list", { cccproject: Number(projectId), series: offerSeries(), page: 1, pageSize: 50 });
       return (res.data ?? []).map(rowToOffer).sort((a, b) => b.version - a.version);
@@ -351,6 +362,15 @@ export const softOneProvider: DataProvider = {
     async projectLookups() {
       const prjc = (await bootstrap()).prjc ?? {};
       return { states: toRefs(prjc.prjState, true), categories: toRefs(prjc.prjCategory, true) };
+    },
+    async searchProducts(q, limit) {
+      const res = await js<S1ProductRow[]>("api.crm.products", "list", { q: q.trim(), page: 1, pageSize: limit });
+      const items = (res.data ?? []).map((r) => {
+        if (r.mtrl === undefined || r.mtrl === null || r.mtrl === "") throw new Error(`api.crm.products: row without mtrl: ${JSON.stringify(r).slice(0, 200)}`);
+        const price = Number(r.floorPrice ?? r.pricew ?? 0);
+        return { mtrl: String(r.mtrl), code: r.code ?? "", name: r.name ?? "", price: Number.isFinite(price) ? price : 0 };
+      });
+      return { total: Number(res.totalCount ?? items.length), items };
     },
     async findProduct(code) {
       const res = await js<S1ProductRow[]>("api.crm.products", "list", { code, page: 1, pageSize: 5 });
