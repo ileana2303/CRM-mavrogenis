@@ -15,7 +15,8 @@ export default async function ConsentPage({ params }: { params: Promise<{ id: st
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const existing = await getConsent(id);
-  const signedBy = existing ? await userName(existing.byUserId) : null;
+  // who saved it is known only when SoftOne records it (today's signature files do not)
+  const signedBy = existing?.byUserId ? await userName(existing.byUserId) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,16 +27,25 @@ export default async function ConsentPage({ params }: { params: Promise<{ id: st
       {existing && (
         <Card>
           <Notice tone="green">
-            {el.customer.consentSigned}: {fmtDateTime(existing.signedAt)} {el.consent.by} {signedBy} · {existing.signerName}
+            {el.customer.consentSigned}: {fmtDateTime(existing.signedAt)}
+            {signedBy && (
+              <>
+                {" "}
+                {el.consent.by} {signedBy}
+              </>
+            )}{" "}
+            · {existing.signerName}
           </Notice>
           <div className="mt-3 flex items-start gap-4">
             <img src={existing.signaturePng} alt="Υπογραφή" className="h-24 border border-[var(--line)] rounded-lg bg-white" />
-            <ul className="text-sm text-[var(--muted)]">
-              <li>{el.consent.email}: {existing.channels.email ? el.app.yes : el.app.no}</li>
-              <li>{el.consent.sms}: {existing.channels.sms ? el.app.yes : el.app.no}</li>
-              <li>{el.consent.phone}: {existing.channels.phone ? el.app.yes : el.app.no}</li>
-              <li>{el.consent.viber}: {existing.channels.viber ? el.app.yes : el.app.no}</li>
-            </ul>
+            {existing.channels && (
+              <ul className="text-sm text-[var(--muted)]">
+                <li>{el.consent.email}: {existing.channels.email ? el.app.yes : el.app.no}</li>
+                <li>{el.consent.sms}: {existing.channels.sms ? el.app.yes : el.app.no}</li>
+                <li>{el.consent.phone}: {existing.channels.phone ? el.app.yes : el.app.no}</li>
+                <li>{el.consent.viber}: {existing.channels.viber ? el.app.yes : el.app.no}</li>
+              </ul>
+            )}
           </div>
         </Card>
       )}
@@ -54,10 +64,10 @@ export default async function ConsentPage({ params }: { params: Promise<{ id: st
           <div className="flex flex-wrap gap-2">
             {(
               [
-                ["ch_email", el.consent.email, existing?.channels.email ?? true],
-                ["ch_sms", el.consent.sms, existing?.channels.sms ?? false],
-                ["ch_phone", el.consent.phone, existing?.channels.phone ?? true],
-                ["ch_viber", el.consent.viber, existing?.channels.viber ?? false],
+                ["ch_email", el.consent.email, existing?.channels?.email ?? true],
+                ["ch_sms", el.consent.sms, existing?.channels?.sms ?? false],
+                ["ch_phone", el.consent.phone, existing?.channels?.phone ?? true],
+                ["ch_viber", el.consent.viber, existing?.channels?.viber ?? false],
               ] as const
             ).map(([n, l, def]) => (
               <label key={n} className="chip">

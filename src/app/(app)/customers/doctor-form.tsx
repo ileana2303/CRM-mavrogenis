@@ -108,10 +108,8 @@ export function DoctorForm({
             <Select
               name="rank"
               defaultValue={doctor?.rank ?? ""}
-              options={[
-                { value: "", label: el.customer.rankSelect },
-                ...entries(el.enums.rank).map(([v, l]) => ({ value: v, label: l })),
-              ]}
+              placeholder={el.customer.rankSelect}
+              options={entries(el.enums.rank).map(([v, l]) => ({ value: v, label: l }))}
             />
           </Field>
         </div>

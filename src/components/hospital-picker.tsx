@@ -48,6 +48,7 @@ export function HospitalPicker({ options, defaultValue }: { options: Hospital[];
           searchable
           placeholder={el.customer.addHospital}
           ariaLabel={el.customer.addHospital}
+          title={el.customer.hospital}
           options={options.filter((o) => !taken.has(o.id)).map((o) => ({ value: o.id, label: o.name, hint: o.code }))}
         />
       )}

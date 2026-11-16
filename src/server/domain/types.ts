@@ -66,9 +66,11 @@ export interface Consent {
   signerName: string;
   /** PNG data URL */
   signaturePng: string;
-  channels: ConsentChannels;
+  /** absent = not stored in SoftOne (the signature files carry no channels) – never shown as «Όχι» */
+  channels?: ConsentChannels;
   signedAt: string;
-  byUserId: string;
+  /** PRSN who saved it; absent = SoftOne does not record it on the signature file */
+  byUserId?: string;
 }
 
 export type EquipmentCategory =

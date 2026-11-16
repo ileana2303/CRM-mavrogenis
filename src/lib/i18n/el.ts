@@ -37,6 +37,7 @@ export const el = {
     details: "Στοιχεία",
     date: "Ημερομηνία",
     notFound: "Δεν βρέθηκε",
+    select: "Επιλογή",
     error: "Σφάλμα",
     errorHint: "Το μήνυμα από τον server:",
     retry: "Δοκιμή ξανά",

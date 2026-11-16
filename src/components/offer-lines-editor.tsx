@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Icon } from "./icons";
+import { Modal } from "./modal";
 import { fmtEur } from "@/lib/format";
 import { cleanNumberInput, formatGr, parseGr } from "@/lib/gr-number";
 import type { OfferCalc, ProductHit } from "@/server/domain/types";
@@ -21,6 +22,8 @@ type Line = {
   discountValue: string;
   value: string;
   by: "discount" | "discountValue" | "value";
+  /** added with «+ Προσθήκη είδους» → the product modal opens at once */
+  auto?: boolean;
 };
 
 /** What the form around the lines needs: the save gate, the leave question and the totals bar. */
@@ -176,7 +179,7 @@ export function OfferLinesEditor({
                       )}
                       <button
                         type="button"
-                        onClick={() => update(l.key, { product: null, price: "", manual: false, discount: "", discountValue: "", value: "", by: "discount" })}
+                        onClick={() => update(l.key, { product: null, price: "", manual: false, discount: "", discountValue: "", value: "", by: "discount", auto: true })}
                         className="text-brand-700 font-medium hover:underline"
                       >
                         Αλλαγή είδους
@@ -184,7 +187,7 @@ export function OfferLinesEditor({
                     </p>
                   </>
                 ) : (
-                  <ProductSearch onPick={(p) => update(l.key, { product: p, price: "", manual: false, discountValue: "", value: "", by: "discount" })} />
+                  <ProductSearch autoOpen={l.auto} onPick={(p) => update(l.key, { product: p, price: "", manual: false, discountValue: "", value: "", by: "discount" })} />
                 )}
               </div>
               {l.product && (
@@ -290,7 +293,7 @@ export function OfferLinesEditor({
 
       <button
         type="button"
-        onClick={() => setLines((ls) => [...ls, blank(next.current++)])}
+        onClick={() => setLines((ls) => [...ls, { ...blank(next.current++), auto: true }])}
         className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-200 bg-white/40 font-semibold text-brand-700 transition-colors hover:border-brand-500 hover:bg-brand-50/60"
       >
         <Icon.plus size={18} /> Προσθήκη είδους
@@ -308,14 +311,21 @@ function Num({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Type ≥ 2 characters → api.crm.products/list {q}; shows how many matched when there are more than listed. */
-function ProductSearch({ onPick }: { onPick: (p: ProductHit) => void }) {
+/**
+ * «Αναζήτηση είδους»: a field-like button that opens the product modal (search focused, results as 48px rows).
+ * Type ≥ 2 characters → api.crm.products/list {q}; says how many matched when there are more than listed.
+ * `autoOpen`: lines added with «+ Προσθήκη είδους» open the modal at once (choosing the product is the first step).
+ */
+function ProductSearch({ onPick, autoOpen }: { onPick: (p: ProductHit) => void; autoOpen?: boolean }) {
+  const [open, setOpen] = useState(!!autoOpen);
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
   const [res, setRes] = useState<{ total: number; items: ProductHit[] } | { error: string } | null>(null);
+  const [active, setActive] = useState(0);
   const [pending, start] = useTransition();
-  const root = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
+  const input = useRef<HTMLInputElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const items = res && "items" in res ? res.items : [];
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -326,7 +336,10 @@ function ProductSearch({ onPick }: { onPick: (p: ProductHit) => void }) {
     const t = setTimeout(() => {
       start(async () => {
         const r = await searchProductsAction(q);
-        if (mine === seq.current) setRes(r);
+        if (mine === seq.current) {
+          setRes(r);
+          setActive(0);
+        }
       });
     }, 300);
     return () => clearTimeout(t);
@@ -334,62 +347,99 @@ function ProductSearch({ onPick }: { onPick: (p: ProductHit) => void }) {
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
+    const t = window.setTimeout(() => input.current?.focus(), 30);
+    return () => window.clearTimeout(t);
   }, [open]);
 
+  useEffect(() => {
+    if (open) list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [active, open]);
+
+  const pick = (p: ProductHit) => {
+    onPick(p);
+    setOpen(false);
+    setQ("");
+    setRes(null);
+  };
+
   return (
-    <div ref={root} className="relative">
-      <div className="relative">
-        <Icon.search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-        <input
-          className="input pl-10"
-          value={q}
-          autoFocus
-          placeholder="Αναζήτηση είδους: κωδικός ή περιγραφή…"
-          onChange={(e) => {
-            setQ(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.preventDefault(); // never submit the offer from the search box
-          }}
-          aria-busy={pending || undefined}
-        />
-      </div>
-      {open && q.trim().length >= 2 && (
-        <div className="absolute z-50 mt-1 w-full max-h-80 overflow-y-auto rounded-2xl border border-[var(--line)] bg-white shadow-[0_18px_40px_-16px_rgba(16,36,70,0.45)] py-1">
-          {pending && !res && <div className="px-3 py-3 text-sm text-[var(--muted)]">Αναζήτηση…</div>}
-          {res && "error" in res && <div className="px-3 py-3 text-sm text-red-700">{res.error}</div>}
-          {res && "items" in res && res.items.length === 0 && <div className="px-3 py-3 text-sm text-[var(--muted)]">Δεν βρέθηκε είδος.</div>}
-          {res &&
-            "items" in res &&
-            res.items.map((p) => (
-              <button
-                key={p.mtrl}
-                type="button"
-                onClick={() => {
-                  onPick(p);
-                  setOpen(false);
-                  setQ("");
-                }}
-                className="w-full text-left px-3 py-2 min-h-11 hover:bg-brand-50"
-              >
-                <span className="block truncate">{p.name}</span>
-                <span className="block text-xs text-[var(--muted)] font-mono">{p.code}</span>
-              </button>
-            ))}
-          {res && "items" in res && res.total > res.items.length && (
-            <div className="px-3 py-2 text-xs text-[var(--muted)] border-t border-[var(--line)]">
-              Βρέθηκαν {res.total} – εμφανίζονται {res.items.length}. Γράψτε περισσότερα για να περιορίσετε.
-            </div>
-          )}
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        className="input flex items-center gap-2 text-left text-[var(--muted)] cursor-pointer"
+      >
+        <Icon.search size={18} className="shrink-0" />
+        <span className="truncate">Αναζήτηση είδους: κωδικός ή περιγραφή…</span>
+      </button>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Επιλογή είδους"
+        width="40rem"
+        footer={
+          res && "items" in res && res.total > res.items.length
+            ? `Βρέθηκαν ${res.total} – εμφανίζονται ${res.items.length}. Γράψτε περισσότερα για να περιορίσετε.`
+            : res && "items" in res && res.items.length
+              ? `${res.total} ${res.total === 1 ? "είδος" : "είδη"}`
+              : undefined
+        }
+      >
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Icon.search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <input
+              ref={input}
+              autoFocus
+              className="input pl-10 pr-10"
+              value={q}
+              placeholder="Κωδικός ή περιγραφή (τουλάχιστον 2 χαρακτήρες)…"
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActive((a) => Math.min(items.length - 1, a + 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActive((a) => Math.max(0, a - 1));
+                } else if (e.key === "Enter") {
+                  e.preventDefault(); // never submit the offer from the search box
+                  if (items[active]) pick(items[active]);
+                }
+              }}
+              aria-busy={pending || undefined}
+            />
+            {pending && (
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center" aria-hidden>
+                <span className="size-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+              </span>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+        <div ref={list} role="listbox" className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-[var(--line)] py-1">
+          {q.trim().length < 2 && <div className="px-5 py-4 text-sm text-[var(--muted)]">Γράψτε κωδικό ή μέρος της περιγραφής.</div>}
+          {q.trim().length >= 2 && pending && !res && <div className="px-5 py-4 text-sm text-[var(--muted)]">Αναζήτηση…</div>}
+          {res && "error" in res && <div className="px-5 py-4 text-sm text-red-700">{res.error}</div>}
+          {res && "items" in res && res.items.length === 0 && <div className="px-5 py-4 text-sm text-[var(--muted)]">Δεν βρέθηκε είδος.</div>}
+          {items.map((p, i) => (
+            <button
+              key={p.mtrl}
+              type="button"
+              role="option"
+              aria-selected={i === active}
+              data-index={i}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => pick(p)}
+              className={`w-full text-left px-5 py-2.5 min-h-12 ${i === active ? "bg-brand-50" : ""}`}
+            >
+              <span className="block leading-snug">{p.name}</span>
+              <span className="block text-xs text-[var(--muted)] font-mono">{p.code}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
+    </>
   );
 }

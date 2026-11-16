@@ -49,7 +49,8 @@ export default async function NewProjectPage({ params }: { params: Promise<{ id:
           <Select
             name="categoryId"
             defaultValue=""
-            options={[{ value: "", label: el.customer.rankSelect }, ...lookups.categories.map((c) => ({ value: c.id, label: c.name }))]}
+            placeholder={el.customer.rankSelect}
+            options={lookups.categories.map((c) => ({ value: c.id, label: c.name }))}
           />
         </Field>
         <Field label={el.projects.stage} required>

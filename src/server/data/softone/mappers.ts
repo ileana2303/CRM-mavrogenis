@@ -590,9 +590,8 @@ export function rowToConsent(r: S1CustomerRow): Consent | null {
     doctorId: String(r.trdr),
     signerName: latest.signer,
     signaturePng: latest.data ? (latest.data.startsWith("data:") ? latest.data : `data:image/png;base64,${latest.data}`) : "",
-    channels: { email: false, sms: false, phone: false, viber: false },
+    // channels and the saving user are not on SoftOne's signature file: left out, not faked
     signedAt: latest.at,
-    byUserId: "",
   };
 }
 
