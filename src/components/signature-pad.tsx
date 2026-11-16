@@ -98,6 +98,8 @@ export function SignaturePad({ name }: { name: string }) {
           onPointerUp={onUp}
           onPointerCancel={onUp}
           onPointerLeave={onUp}
+          // inside a <label> the click after a stroke would be forwarded to the «Καθαρισμός» button and wipe it
+          onClick={(e) => e.preventDefault()}
         />
         {!hasInk && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">{el.consent.signature}</span>}
         <span className="pointer-events-none absolute left-6 right-6 bottom-8 border-b border-[var(--line)]" />

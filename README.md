@@ -40,8 +40,8 @@ src/
       kpis                   KPIs / Απόδοση Πωλήσεων
       manager/check-ins      MANAGER only: Άφιξη/Αναχώρηση log + team KPIs
       support/requests       SUPPORT (+MANAGER): price offer requests and return them
-  components/                UI primitives, ActionForm (SoftOne refusals as an alert), offer lines editor,
-                             signature pad, dictation textarea, confirm dialog
+  components/                UI primitives, ActionForm (SoftOne refusals as an alert), Modal (every picker),
+                             Select, offer lines editor, signature pad, dictation textarea, confirm dialog
   lib/i18n/el.ts             every user-visible string
   lib/athens.ts              SoftOne dates are Europe/Athens wall-clock time (servers run in UTC)
   lib/gr-number.ts           Greek number input / format («4.714,29»)
@@ -106,3 +106,5 @@ Chromium (`npx playwright install webkit`).
 - **Άφιξη/Αναχώρηση**: asks for geolocation once (needs HTTPS); works without it (timestamps only). Visible to managers only.
 - Inputs are 16px so Safari never zooms on focus; phone-number auto-linking is disabled so ΑΦΜ is not rendered as a tel: link.
 - Amounts are typed and shown the Greek way («4.714,29»); dates and times are always Athens time.
+- Every choice list opens as a modal (high on the screen, so the keyboard never covers a search's results); only the
+  user menu in the top bar is a dropdown.

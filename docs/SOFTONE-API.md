@@ -60,6 +60,9 @@ Values: `actType` plain int 1 Ιδιώτης / 2 Δημόσιος ✔; `dRankCod
 | `setSignature` ✔ | `trdr`, `data` (PNG as base64, no data-URL prefix), `size` (bytes), `name` (who signed) | `{ success }` — verified on a temp customer |
 
 Read ✔: `api.crm.customers/getData` returns `signatures: [{ name: "SIGNATURE_<signer>_<unix ms>.png", sofname, crtDate (Greek local time, no zone), sodata: <base64> }]` (verified 2026-11-10 on 34583, 97 KB). The CRM takes the newest by the timestamp in the file name and shows signer + date from it. Note: every `getData` now carries the full PNGs — if that gets heavy, add a `withSignatures` flag or return `sodata` only on request. The consent **channels** (email / sms / τηλέφωνο / viber) have no SoftOne field yet — your call where they go.
+**Open (2026-11-17):** the signature file records neither the channels nor the app user who saved it, so the CRM shows
+only date + signer and does not show channels (it used to show them all as «Όχι»). Proposal: `setSignature` takes
+`channels` (+ `prsn`) and getData returns them, or four fields on the customer.
 
 ## 3. `api.crm/hospitals` ✔ — hospitals = TRDR of the hospital category
 | fn | params | row |

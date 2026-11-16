@@ -56,9 +56,14 @@ export default async function ConsentPage({ params }: { params: Promise<{ id: st
         <Field label={el.consent.signerName} required>
           <input name="signerName" className="input" defaultValue={existing?.signerName ?? doctorFullName(doctor)} />
         </Field>
-        <Field label={el.consent.signature} required>
+        {/* a <div>, not a Field <label>: a label forwards the canvas click to the pad's «Καθαρισμός» button */}
+        <div>
+          <span className="label">
+            {el.consent.signature}
+            <span className="text-danger-500"> *</span>
+          </span>
           <SignaturePad name="signature" />
-        </Field>
+        </div>
         <fieldset>
           <legend className="label">{el.consent.channels}</legend>
           <div className="flex flex-wrap gap-2">

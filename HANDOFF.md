@@ -1,6 +1,6 @@
 # Handoff — Diagnostic Equipment CRM Πωλητών
 
-State on **2026-11-16** (last commit on `main`). Read this first, then
+State on **2026-11-17** (last commit on `main`). Read this first, then
 [`docs/SOFTONE-API.md`](docs/SOFTONE-API.md) for every SoftOne call the app makes.
 
 ## What it is
@@ -22,7 +22,7 @@ where he decided so (below).
 | Πελάτες (doctors) | search, card, create / edit | `api.crm.customers/list`, `/getData`; `setData CUSTOMER` form `_CRM_` (header delta only) |
 | Νοσοκομεία | searchable picker on the doctor form | list `api.crm/hospitals` (TRDR rows); links = detail `CCCTRDTRDR {TRDREL, LINENUM}` |
 | ΑΦΜ lookup | ΑΦΜ field on the doctor form | ΑΑΔΕ RgWsPublic2 (not SoftOne) — **codes rejected, see open items** |
-| Συγκατάθεση | signature screen | `api.crm.customers/setSignature`; read `signatures[]` from getData |
+| Συγκατάθεση | signature screen | `api.crm.customers/setSignature`; read `signatures[]` from getData (date + signer only — see open items) |
 | Εξοπλισμός | `/customers/[id]/equipment` | getData `machines[]`; `setData CUSTOMER {CCCTRDMACHINES}`; catalog from `api.crm/bootstrap` |
 | Άφιξη / Αναχώρηση | customer card | `SOMEETING` series 2001 (FROMDATE / FINALDATE); `api.crm.actions/getPendingArrivals` |
 | Εκκρεμότητες | `/customers/[id]/pending` | `SOTASK` series 3000; `api.crm.actions/getPendings` |
@@ -67,6 +67,14 @@ project close / revise / follow-up screens, customer history, KPIs, the manager 
 **Numbers** — inputs are Greek format («4.714,29»): `src/lib/gr-number.ts` (`parseGr` / `formatGr`). A lone dot is
 a decimal point unless it reads like thousands (`1.500`). SoftOne always receives plain numbers.
 
+**Pickers are modals** — every `Select` and the product search open `Modal` (`src/components/modal.tsx`, native
+`<dialog>` **portalled to `<body>`**). Only the user menu in the top bar is a dropdown. No «Επιλέξτε…» *option* in a
+list: use the `placeholder` prop for an empty field.
+
+**`<label>` trap** — a `Field` is a `<label>`: a click anywhere inside it is forwarded to the first control in it. That
+made the modal reopen after a choice and the signature wipe itself (the click after a stroke hit «Καθαρισμός»). Keep
+modals portalled, and do not put a canvas / several buttons inside a `Field` — use a `<div>` with a `.label` span.
+
 **Errors** — forms that write to SoftOne use `ActionForm` (`src/components/action-form.tsx`): the action returns
 `{ error }`, the message shows as an alert and the form keeps what was typed. Never let a SoftOne refusal throw into
 the error page. Missing SoftOne data is an error, never a silent «—» / empty fallback.
@@ -92,6 +100,10 @@ Needs a decision or a SoftOne change from Panagiotis:
 10. **Vercel** — none of the 2026-11-16 work has run there yet. Check env vars (`S1_*`, `GSIS_*`) and do one real
     pass on production.
 11. **Test data** on customer 34583: project 6071 «TEST CRM APP 2» and any OFFCRM test offers.
+12. **Consent channels are not stored** — the Email / SMS / Τηλέφωνο / Viber a doctor ticks when signing go nowhere
+    (`setSignature` takes only the PNG and the signer name), and the signature file does not record which app user
+    saved it. The screen therefore shows date + signer only. GDPR record: add `channels` to `setSignature` (+ getData)
+    or four fields on the customer.
 
 ## Working on it
 
