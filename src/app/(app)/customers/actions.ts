@@ -10,8 +10,20 @@ import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
 import { addTask, completeTask, reopenTask } from "@/server/services/task-service";
 import { setOfferClosed } from "@/server/services/offer-service";
+import type { ActionResult } from "@/components/action-form";
+import { el } from "@/lib/i18n/el";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
+
+/** Runs a SoftOne write; a refusal comes back as `{ error }` for ActionForm (the form keeps what was typed). */
+async function attempt(what: string, fn: () => Promise<unknown>): Promise<ActionResult> {
+  try {
+    await fn();
+  } catch (e) {
+    console.error(`[customers] ${what} failed`, e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 function doctorInput(fd: FormData): DoctorInput {
   const act = str(fd, "activityType");
@@ -39,28 +51,33 @@ function doctorInput(fd: FormData): DoctorInput {
 }
 
 /** Save is allowed even when required fields are empty (slide 6 note). */
-export async function saveDoctorAction(fd: FormData) {
+export async function saveDoctorAction(fd: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const id = str(fd, "id");
   const goConsent = str(fd, "intent") === "consent";
   const input = doctorInput(fd);
-  const doctor = id ? await updateDoctor(id, input) : await createDoctor(input, user);
+  let doctor: { id: string } | undefined;
+  const failed = await attempt("save doctor", async () => {
+    doctor = id ? await updateDoctor(id, input) : await createDoctor(input, user);
+  });
+  if (failed || !doctor) return failed ?? { error: "Δεν επιστράφηκε πελάτης από το SoftOne." };
   revalidatePath("/customers");
   redirect(goConsent ? `/customers/${doctor.id}/consent` : `/customers/${doctor.id}`);
 }
 
-export async function saveConsentAction(fd: FormData) {
+export async function saveConsentAction(fd: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const doctorId = str(fd, "doctorId");
   const signature = str(fd, "signature");
-  if (!signature.startsWith("data:image/png")) redirect(`/customers/${doctorId}/consent?error=signature`);
-  await saveConsent(
+  if (!signature.startsWith("data:image/png")) return { error: el.consent.noSignature };
+  const failed = await attempt("save consent", () => saveConsent(
     doctorId,
     str(fd, "signerName"),
     signature,
     { email: fd.get("ch_email") === "on", sms: fd.get("ch_sms") === "on", phone: fd.get("ch_phone") === "on", viber: fd.get("ch_viber") === "on" },
     user,
-  );
+  ));
+  if (failed) return failed;
   revalidatePath(`/customers/${doctorId}`);
   redirect(`/customers/${doctorId}?saved=consent`);
 }
@@ -81,25 +98,22 @@ const equipmentSchema = z.array(
   }),
 );
 
-export async function saveEquipmentAction(fd: FormData) {
+export async function saveEquipmentAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const doctorId = str(fd, "doctorId");
   const parsed = equipmentSchema.safeParse(JSON.parse(str(fd, "rows") || "[]"));
-  if (!parsed.success) redirect(`/customers/${doctorId}/equipment?error=1`);
-  await saveEquipment(
-    doctorId,
-    parsed.data
-      .filter((r) => r.manufacturer || r.model || r.category),
+  if (!parsed.success) return { error: "Μη έγκυρες γραμμές εξοπλισμού." };
+  const failed = await attempt("save equipment", () =>
+    saveEquipment(
+      doctorId,
+      parsed.data.filter((r) => r.manufacturer || r.model || r.category),
+    ),
   );
+  if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/equipment`);
   redirect(`/customers/${doctorId}?saved=equipment`);
 }
 
-/** «Συγκατάθεση γιατρού» on the doctor form: save, then go to the consent screen. */
-export async function saveDoctorThenConsentAction(fd: FormData) {
-  fd.set("intent", "consent");
-  return saveDoctorAction(fd);
-}
 
 /** «+ Νέο Project» on the visit form. */
 export async function saveVisitThenProjectAction(fd: FormData) {
@@ -135,31 +149,36 @@ export async function checkInAction(doctorId: string, kind: "arrive" | "depart",
   return rec ? { arrivedAt: rec.arrivedAt, departedAt: rec.departedAt ?? null } : null;
 }
 
-export async function addTaskAction(fd: FormData) {
+export async function addTaskAction(fd: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const doctorId = str(fd, "doctorId");
   const title = str(fd, "title");
   const dueDate = str(fd, "dueDate");
-  if (title && dueDate) await addTask(doctorId, title, dueDate, user, str(fd, "projectId") || undefined);
+  if (!title || !dueDate) return { error: "Συμπληρώστε τίτλο και ημερομηνία." };
+  const failed = await attempt("add task", () => addTask(doctorId, title, dueDate, user, str(fd, "projectId") || undefined));
+  if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
   redirect(`/customers/${doctorId}/pending`);
 }
 
-export async function toggleTaskAction(fd: FormData) {
+export async function toggleTaskAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const id = str(fd, "id");
   const doctorId = str(fd, "doctorId");
-  if (str(fd, "op") === "reopen") await reopenTask(id);
-  else await completeTask(id);
+  const failed = await attempt("toggle task", () => (str(fd, "op") === "reopen" ? reopenTask(id) : completeTask(id)));
+  if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
   redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
 }
 
-export async function setOfferClosedAction(fd: FormData) {
+export async function setOfferClosedAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const doctorId = str(fd, "doctorId");
   const closed = str(fd, "closed");
-  if (["YES", "NO", "PARTIAL"].includes(closed)) await setOfferClosed(str(fd, "offerId"), closed as "YES" | "NO" | "PARTIAL");
+  if (["YES", "NO", "PARTIAL"].includes(closed)) {
+    const failed = await attempt("set offer closed", () => setOfferClosed(str(fd, "offerId"), closed as "YES" | "NO" | "PARTIAL"));
+    if (failed) return failed;
+  }
   revalidatePath(`/customers/${doctorId}/offers`);
   redirect(`/customers/${doctorId}/offers`);
 }

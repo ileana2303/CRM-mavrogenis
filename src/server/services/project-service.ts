@@ -56,6 +56,16 @@ export function createProjectForDoctor(input: NewS1Project, user: Session) {
   return db().projects.createForDoctor(input, user.s1Prsn);
 }
 
+/** One project from SoftOne (getData PRJC _CRM_) – header and its offers */
+export function getProjectDetail(id: string) {
+  return db().projects.detail(id);
+}
+
+/** Stage change from the project screen → PRJC.PRJSTATE */
+export function setProjectState(id: string, stateId: string) {
+  return db().projects.setState(id, stateId);
+}
+
 export function projectLookups() {
   return db().stats.projectLookups();
 }

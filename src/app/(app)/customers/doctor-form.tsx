@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BackLink, Field, Notice, PageTitle, Radios, entries } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import type { Doctor, Hospital } from "@/server/domain/types";
-import { saveDoctorAction, saveDoctorThenConsentAction } from "./actions";
+import { saveDoctorAction } from "./actions";
+import { ActionForm } from "@/components/action-form";
 import { Select } from "@/components/select";
 import { AfmField } from "@/components/afm-field";
 import { HospitalPicker } from "@/components/hospital-picker";
@@ -22,7 +23,7 @@ export function DoctorForm({
   const options: Hospital[] = [...hospitals];
   for (const h of doctor?.hospitals ?? []) if (!options.some((o) => o.id === h.id)) options.push(h);
   return (
-    <form action={saveDoctorAction} className="flex flex-col gap-4">
+    <ActionForm action={saveDoctorAction} className="flex flex-col gap-4">
       {doctor && <input type="hidden" name="id" value={doctor.id} />}
       <BackLink href={backHref} />
       {/* actions live in the title row (top right) so they are reachable without scrolling the form */}
@@ -34,7 +35,7 @@ export function DoctorForm({
                 {el.app.cancel}
               </Link>
             )}
-            <button formAction={saveDoctorThenConsentAction} className="btn-secondary">
+            <button name="intent" value="consent" className="btn-secondary">
               {el.customer.consent}
             </button>
             <button className="btn-primary">{el.app.save}</button>
@@ -115,6 +116,6 @@ export function DoctorForm({
           </Field>
         </div>
       </div>
-    </form>
+    </ActionForm>
   );
 }

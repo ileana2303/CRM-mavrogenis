@@ -12,7 +12,7 @@ export const metadata = { title: el.projects.title };
 
 /**
  * A doctor's projects from api.crm.customers/projects (code, title, type, stage, active, dates). Value / offer date and the
- * project screens behind a row come once SoftOne returns them (SOON.projects); until then rows don't open.
+ * row opens the project screen (getData PRJC _CRM_).
  */
 export default async function ProjectsPage({
   params,
@@ -71,7 +71,14 @@ export default async function ProjectsPage({
                   <tr key={p.id}>
                     <td className="tabular-nums">{i + 1}</td>
                     <td>
-                      <span className="font-medium">{p.title}</span> {retired(p.active)}
+                      {SOON.projectDetail ? (
+                        <span className="font-medium">{p.title}</span>
+                      ) : (
+                        <Link href={`/customers/${id}/projects/${p.id}`} className="font-medium text-brand-700 hover:underline">
+                          {p.title}
+                        </Link>
+                      )}{" "}
+                      {retired(p.active)}
                       <span className="block text-xs text-[var(--muted)]">{p.code}</span>
                     </td>
                     <td>{p.category.name || "—"}</td>
@@ -85,9 +92,11 @@ export default async function ProjectsPage({
           </div>
           <ul className="md:hidden flex flex-col gap-3">
             {projects.map((p) => (
-              <li key={p.id} className="card p-4 flex items-center gap-3">
+              <li key={p.id} className="card p-4 flex items-center gap-3 relative">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{p.title}</div>
+                  <div className="font-semibold">
+                    {SOON.projectDetail ? p.title : <Link href={`/customers/${id}/projects/${p.id}`} className="after:absolute after:inset-0">{p.title}</Link>}
+                  </div>
                   <div className="text-xs text-[var(--muted)]">
                     {p.code} · {p.category.name || "—"} · {el.projects.updatedAt}: {fmtDate(p.updatedAt)}
                   </div>

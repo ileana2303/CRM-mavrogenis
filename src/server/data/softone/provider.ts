@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -215,6 +215,21 @@ export const softOneProvider: DataProvider = {
       const res = await s1.setData(cid, "PRJC", projectToSetData(p, salesmanId), undefined, CRM_FORM);
       if (!res.id) throw new S1Error("setData PRJC returned no id");
       return { id: String(res.id) };
+    },
+    // getData PRJC form _CRM_ key = prjc: header + VOPPOFFS (owner, 2026-11-16: "everything is there")
+    async detail(id) {
+      const cid = await clientId();
+      try {
+        const res = await s1.getData(cid, "PRJC", Number(id), undefined, CRM_FORM);
+        return prjcToDetail(res.data ?? {});
+      } catch (e) {
+        if (e instanceof S1Error && /login|credentials|clientid/i.test(e.message)) redirect("/login?expired=1");
+        throw e;
+      }
+    },
+    async setState(id, stateId) {
+      const cid = await clientId();
+      await s1.setData(cid, "PRJC", { PRJC: [{ PRJSTATE: Number(stateId) }] }, Number(id), CRM_FORM);
     },
     async summariesByDoctor(doctorId) {
       const prjc = (await bootstrap()).prjc ?? {};

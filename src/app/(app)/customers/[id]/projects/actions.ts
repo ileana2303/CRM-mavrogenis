@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
 import type { FollowUpContactMethod, FollowUpResult, NextAction, ProjectType } from "@/server/domain/types";
-import { addFollowUp, closeProject, createProject, createProjectForDoctor, getProject, requestOffer, reviseOffer } from "@/server/services/project-service";
+import { addFollowUp, closeProject, createProject, createProjectForDoctor, getProject, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
 import { getOffer, markOfferSent } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -157,4 +157,23 @@ export async function createS1ProjectAction(fd: FormData): Promise<ActionResult>
   revalidatePath(`/customers/${doctorId}`);
   revalidatePath(`/customers/${doctorId}/projects`);
   redirect(`/customers/${doctorId}/projects?saved=1`);
+}
+
+/** «Αλλαγή σταδίου» on the project screen → setData PRJC {PRJSTATE}; a refusal stays on the screen as an alert. */
+export async function setProjectStateAction(fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const projectId = str(fd, "projectId");
+  const stateId = str(fd, "stateId");
+  if (!stateId) return { error: el.projects.requiredError };
+  if (stateId !== str(fd, "currentStateId")) {
+    try {
+      await setProjectState(projectId, stateId);
+    } catch (e) {
+      console.error("[projects] set state failed", e);
+      return { error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  revalidatePath(`/customers/${doctorId}/projects`);
+  redirect(`/customers/${doctorId}/projects/${projectId}?saved=state`);
 }

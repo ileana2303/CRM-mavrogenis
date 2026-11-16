@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BackLink, DoctorLine, Empty, PageTitle } from "@/components/ui";
 import { OfferStatusBadge } from "@/components/project-badges";
 import { el } from "@/lib/i18n/el";
+import { ActionForm } from "@/components/action-form";
 import { Select } from "@/components/select";
 import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
@@ -57,7 +58,7 @@ export default async function OffersPage({ params }: { params: Promise<{ id: str
                     <OfferStatusBadge status={o.status} />
                   </td>
                   <td>
-                    <form action={setOfferClosedAction} className="flex items-center gap-1">
+                    <ActionForm action={setOfferClosedAction} className="flex items-center gap-1">
                       <input type="hidden" name="doctorId" value={id} />
                       <input type="hidden" name="offerId" value={o.id} />
                       <Select
@@ -73,7 +74,7 @@ export default async function OffersPage({ params }: { params: Promise<{ id: str
                         ]}
                       />
                       <button className="btn-ghost min-h-9 text-sm">OK</button>
-                    </form>
+                    </ActionForm>
                   </td>
                   <td>
                     <Link href={`/customers/${id}/projects/${o.projectId}`} className="text-brand-700 font-semibold hover:underline whitespace-nowrap">

@@ -195,6 +195,27 @@ export interface ProjectSummary {
   updatedAt: string;
 }
 
+/** An offer linked to a project (getData PRJC _CRM_ → VOPPOFFS) */
+export interface ProjectOffer {
+  id: string;
+  number: string;
+  series: string;
+  type: string;
+  date: string;
+  net: number;
+  approved: boolean;
+  cancelled: boolean;
+  remarks: string;
+}
+
+/** One project as getData PRJC (form _CRM_) returns it */
+export interface ProjectDetail extends ProjectSummary {
+  doctorId: string;
+  salesman: string;
+  notes: string;
+  offers: ProjectOffer[];
+}
+
 /** «Νέο Project» → setData PRJC form _CRM_ (owner, 2026-11-16) */
 export interface NewS1Project {
   doctorId: string;

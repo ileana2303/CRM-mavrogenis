@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -211,6 +211,49 @@ export function rowToProjectSummary(
     category: lookup(r.prjCategory, lookups.categories, "prjCategory", String(r.prjc)),
     createdAt: s1Date(r.insDate),
     updatedAt: s1Date(r.updDate) || s1Date(r.insDate),
+  };
+}
+
+/** getData shows a lookup as "1001|Replacement"; a plain value is an id with no name */
+function idName(v: string | undefined): { id?: string; name?: string } {
+  if (!v) return {};
+  const i = v.indexOf("|");
+  return i < 0 ? { id: v } : { id: v.slice(0, i), name: v.slice(i + 1) };
+}
+
+/** getData PRJC (form _CRM_): header PRJC[0] + offers VOPPOFFS (newest first) */
+export function prjcToDetail(data: Record<string, Array<Record<string, string>>>): ProjectDetail | null {
+  const h = data.PRJC?.[0];
+  if (!h) return null;
+  if (!h.PRJC) throw new Error(`getData PRJC: header without PRJC: ${JSON.stringify(h).slice(0, 200)}`);
+  const offers: ProjectOffer[] = (data.VOPPOFFS ?? [])
+    .map((o) => ({
+      id: String(o.FINDOC ?? ""),
+      number: o.FINCODE ?? "",
+      series: idName(o.SERIES).name ?? o.SERIES ?? "",
+      type: idName(o.TFPRMS).name ?? "",
+      date: s1Date(o.TRNDATE),
+      net: Number(o.LNETAMNT ?? 0),
+      approved: String(o.APPRV ?? "") === "1",
+      cancelled: String(o.ISCANCEL ?? "") === "1",
+      remarks: o.REMARKS ?? "",
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id));
+  const state = idName(h.PRJSTATE);
+  const category = idName(h.PRJCATEGORY);
+  return {
+    id: String(h.PRJC),
+    code: h.CODE ?? "",
+    title: h.NAME ?? "",
+    active: String(h.ISACTIVE ?? "1") !== "0",
+    state,
+    category,
+    doctorId: String(h.TRDR ?? ""),
+    salesman: [h.SALESMAN_PRSNIN_NAME2, h.SALESMAN_PRSNIN_NAME].filter(Boolean).join(" "),
+    notes: h.REMARKS ?? "",
+    createdAt: s1Date(h.INSDATE),
+    updatedAt: s1Date(h.UPDDATE) || s1Date(h.INSDATE),
+    offers,
   };
 }
 

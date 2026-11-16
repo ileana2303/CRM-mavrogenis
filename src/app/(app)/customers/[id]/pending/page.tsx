@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, BackLink, DoctorLine, Empty, Field, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
+import { ActionForm } from "@/components/action-form";
 import { fmtDate, todayIso } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
@@ -79,13 +80,13 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                     {t.view === "OVERDUE" ? <Badge tone="red">{el.pending.statusOverdue}</Badge> : t.view === "DONE" ? <Badge tone="green">{el.pending.statusDone}</Badge> : <Badge tone="blue">{el.pending.statusOpen}</Badge>}
                   </td>
                   <td className="text-right">
-                    <form action={toggleTaskAction}>
+                    <ActionForm action={toggleTaskAction}>
                       <input type="hidden" name="id" value={t.id} />
                       <input type="hidden" name="doctorId" value={id} />
                       <input type="hidden" name="filter" value={filter} />
                       <input type="hidden" name="op" value={t.status === "DONE" ? "reopen" : "done"} />
                       <button className="btn-ghost min-h-9 text-sm whitespace-nowrap">{t.status === "DONE" ? el.pending.reopen : `✓ ${el.pending.complete}`}</button>
-                    </form>
+                    </ActionForm>
                   </td>
                 </tr>
               ))}
@@ -94,7 +95,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
         )}
       </div>
 
-      <form action={addTaskAction} className="card p-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] items-end">
+      <ActionForm action={addTaskAction} className="card p-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] items-end">
         <input type="hidden" name="doctorId" value={id} />
         <Field label={el.pending.newTitle}>
           <input name="title" className="input" required placeholder="Αποστολή προσφοράς OCT" />
@@ -103,7 +104,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
           <input name="dueDate" type="date" className="input" required defaultValue={todayIso()} />
         </Field>
         <button className="btn-secondary">{el.pending.add}</button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

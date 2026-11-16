@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { BackLink, Card, DoctorLine, Field, Notice, PageTitle } from "@/components/ui";
 import { SignaturePad } from "@/components/signature-pad";
 import { el } from "@/lib/i18n/el";
+import { ActionForm } from "@/components/action-form";
 import { fmtDateTime } from "@/lib/format";
 import { doctorFullName, getConsent, getDoctor } from "@/server/services/customer-service";
 import { userName } from "@/server/services/auth-service";
@@ -9,9 +10,8 @@ import { saveConsentAction } from "../../actions";
 
 export const metadata = { title: el.consent.title };
 
-export default async function ConsentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
+export default async function ConsentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await searchParams;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const existing = await getConsent(id);
@@ -40,7 +40,7 @@ export default async function ConsentPage({ params, searchParams }: { params: Pr
         </Card>
       )}
 
-      <form action={saveConsentAction} className="card p-4 flex flex-col gap-4">
+      <ActionForm action={saveConsentAction} className="card p-4 flex flex-col gap-4">
         <input type="hidden" name="doctorId" value={id} />
         <p className="text-sm text-[var(--muted)]">{el.consent.gdprText}</p>
         <Field label={el.consent.signerName} required>
@@ -49,7 +49,6 @@ export default async function ConsentPage({ params, searchParams }: { params: Pr
         <Field label={el.consent.signature} required>
           <SignaturePad name="signature" />
         </Field>
-        {error === "signature" && <Notice tone="red">{el.consent.noSignature}</Notice>}
         <fieldset>
           <legend className="label">{el.consent.channels}</legend>
           <div className="flex flex-wrap gap-2">
@@ -71,7 +70,7 @@ export default async function ConsentPage({ params, searchParams }: { params: Pr
         <div className="flex justify-end">
           <button className="btn-primary">{el.app.save}</button>
         </div>
-      </form>
+      </ActionForm>
     </div>
   );
 }

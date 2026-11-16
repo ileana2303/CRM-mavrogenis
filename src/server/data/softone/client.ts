@@ -86,8 +86,8 @@ export class S1Client {
   }
 
   /** Standard getData: whole object (all tables) by key. */
-  getData<T = Record<string, Array<Record<string, string>>>>(clientID: string, object: string, key: string | number, locateinfo?: string) {
-    return this.service<{ data: T }>("getData", { clientID, object, key, ...(locateinfo ? { locateinfo } : {}) });
+  getData<T = Record<string, Array<Record<string, string>>>>(clientID: string, object: string, key: string | number, locateinfo?: string, form?: string) {
+    return this.service<{ data: T }>("getData", { clientID, object, ...(form ? { form } : {}), key, ...(locateinfo ? { locateinfo } : {}) });
   }
 
   /** Standard setData: insert (no key) or update (key) an object; returns the record id. */

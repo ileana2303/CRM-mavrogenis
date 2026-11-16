@@ -18,6 +18,7 @@ import type {
   Project,
   ProjectEvent,
   ProjectSummary,
+  ProjectDetail,
   NewS1Project,
   ProjectLookups,
   SalesTurnover,
@@ -77,6 +78,10 @@ export interface ProjectsRepo {
   summariesByDoctor(doctorId: string): Promise<ProjectSummary[]>;
   /** setData PRJC (form _CRM_) → the new PRJC id */
   createForDoctor(p: NewS1Project, salesmanId?: string): Promise<{ id: string }>;
+  /** getData PRJC form _CRM_ key = prjc; null when SoftOne has no such project */
+  detail(id: string): Promise<ProjectDetail | null>;
+  /** setData PRJC key = prjc, form _CRM_, header delta {PRJSTATE} */
+  setState(id: string, stateId: string): Promise<void>;
   listByUser(userId: string): Promise<Project[]>;
   listAll(): Promise<Project[]>;
   findById(id: string): Promise<Project | null>;
