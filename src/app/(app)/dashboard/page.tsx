@@ -8,6 +8,7 @@ import { requireUser } from "@/server/auth/current-user";
 import type { DailyReportItem } from "@/server/domain/types";
 import { listSalespeople } from "@/server/services/auth-service";
 import { dailyReport, defaultRange } from "@/server/services/dashboard-service";
+import { MyDayLists } from "@/components/my-day-lists";
 
 export const metadata = { title: el.daily.title };
 
@@ -22,6 +23,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const userId = session.role === "MANAGER" ? sp.user || salespeople[0]?.id || session.userId : session.userId;
   const report = await dailyReport(userId, range);
   const salesperson = session.role === "MANAGER" ? salespeople.find((u) => u.id === userId)?.fullName : undefined;
+  const ownDay = userId === session.userId;
+  // row actions return to this same report (range / salesperson kept)
+  const qs = (() => {
+    const p = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string" && !!e[1]));
+    const s = p.toString();
+    return s ? `?${s}` : "";
+  })();
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,10 +49,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {el.daily.title}
       </PageTitle>
 
+      {/* actionable list = the logged-in salesperson's own items (getPendings uses the session prsn); a manager looking
+          at someone else's report gets the read-only cards only */}
+      {ownDay && <MyDayLists session={session} back={`/dashboard${qs}`} />}
+
       <div className="grid gap-4 md:grid-cols-2">
         <Section title={el.daily.appointments} items={report.appointments} tone="blue" />
         <Section title={el.daily.offerFollowUps} items={report.offerFollowUps} tone="teal" />
-        <Section title={el.daily.overdue} items={report.overdue} tone="red" />
+        {/* overdue Εκκρεμότητες of someone else – one's own are in «Εκπρόθεσμες» above (incl. calls/meetings) */}
+        {!ownDay && <Section title={el.daily.overdue} items={report.overdue} tone="red" />}
         <Section title={el.daily.pendingOffers} items={report.pendingOffers} tone="amber" />
       </div>
     </div>
