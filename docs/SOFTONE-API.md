@@ -157,6 +157,20 @@ CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
 2. Add to the row: `dueDate` (προθεσμία → overdue logic), `trdr`, `actPrsn`, `soActionCode`, `trnDate`. Without `dueDate` every item shows as due "today".
 3. Later: a project link (`CCCPROJECT`) once projects have a home.
 
+### 8a. Επόμενη ενέργεια (2026-11-19) — row button «→ Επόμενη ενέργεια» next to «✓ Ολοκλήρωση»
+
+One step: create the follow-up, **then** close the Εκκρεμότητα (`ACTSTATUS 3`). If the create is refused the task stays open.
+
+| kind | object | series (env) |
+|---|---|---|
+| Τηλέφωνο | `SOCALL` | 1000 (`S1_CALL_SERIES`) |
+| Email | `SOEMAIL` | 1003 (`S1_EMAIL_SERIES`) |
+| Συνάντηση | `SOMEETING` | 2003 (`S1_MEETING_SERIES`) — same series as the dashboard's appointments |
+
+Payload: `{ "SOACTION": [{ "SERIES", "TRDR", "ACTPRSN": <prsn>, "FROMDATE": "yyyy-mm-dd hh:mm" (Athens), "COMMENTS" }] }`.
+**Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default, no link
+to the source SOTASK (no field known for it). Not verified against SoftOne yet.
+
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
 | step | call |

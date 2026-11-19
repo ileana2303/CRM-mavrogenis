@@ -25,7 +25,7 @@ where he decided so (below).
 | Συγκατάθεση | signature screen | `api.crm.customers/setSignature`; read `signatures[]` from getData (date + signer only — see open items) |
 | Εξοπλισμός | `/customers/[id]/equipment` | getData `machines[]`; `setData CUSTOMER {CCCTRDMACHINES}`; catalog from `api.crm/bootstrap` |
 | Άφιξη / Αναχώρηση | customer card | `SOMEETING` series 2001 (FROMDATE / FINALDATE); `api.crm.actions/getPendingArrivals` |
-| Εκκρεμότητες | `/customers/[id]/pending` | `SOTASK` series 3000; `api.crm.actions/getPendings` |
+| Εκκρεμότητες | `/customers/[id]/pending` | `SOTASK` series 3000; `api.crm.actions/getPendings`. «→ Επόμενη ενέργεια» = SOCALL 1000 / SOEMAIL 1003 / SOMEETING 2003 + close (SOFTONE-API §8a, not verified yet) |
 | **Projects – list** | `/customers/[id]/projects` | `api.crm.customers/projects {trdr, page, pageSize}`; type / stage names from `api.crm/bootstrap prjc` |
 | **Projects – new** | `/customers/[id]/projects/new` | `setData PRJC` form `_CRM_` (rules below) |
 | **Projects – screen + stage** | `/customers/[id]/projects/[pid]` | `getData PRJC _CRM_ key=prjc` (header + `VOPPOFFS` offers); `setData PRJC key {PRJSTATE}` |

@@ -77,6 +77,7 @@ is historical). Implemented today in `src/server/data/softone/provider.ts`:
 | Εξοπλισμός | getData `machines[]`; `setData CUSTOMER {CCCTRDMACHINES}`; catalog `api.crm/bootstrap` |
 | Άφιξη / Αναχώρηση | `SOMEETING` series `S1_ARRIVAL_SERIES` (2001); `api.crm.actions/getPendingArrivals` |
 | Εκκρεμότητες | `SOTASK` series `S1_TASK_SERIES` (3000); `api.crm.actions/getPendings` |
+| Επόμενη ενέργεια | `SOCALL` 1000 / `SOEMAIL` 1003 / `SOMEETING` 2003 (`S1_CALL/EMAIL/MEETING_SERIES`), then the Εκκρεμότητα → ACTSTATUS 3 |
 | projects | list `api.crm.customers/projects`; new `setData PRJC`; screen `getData PRJC`; stage `setData PRJC {PRJSTATE}` |
 | offers | read `api.crm.offers`; new offer `calculate` + `setData SALDOC` (series `S1_OFFER_SERIES` 7015) |
 | products | `api.crm.products/list {q}` (searched as you type) |
