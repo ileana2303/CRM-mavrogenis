@@ -12,6 +12,8 @@ import { openCheckIn } from "@/server/services/checkin-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { listProjectSummaries } from "@/server/services/project-service";
 import { SOON } from "@/lib/features";
+import { TimelineButton } from "@/components/timeline-button";
+import { customerTimelineAction } from "../actions";
 
 export const metadata = { title: el.hub.title };
 
@@ -54,10 +56,21 @@ export default async function HubPage({ params, searchParams }: { params: Promis
       <BackLink href={backHref} />
       <PageTitle
         right={
-          <Link href={`/customers/${id}/edit`} className="btn-secondary">
-            <Icon.pen size={18} />
-            {el.customer.edit}
-          </Link>
+          <div className="flex items-center gap-2">
+            <TimelineButton
+              id={id}
+              load={customerTimelineAction}
+              title={`${el.timeline.title} · ${doctorFullName(doctor)}`}
+              className="btn-secondary inline-flex items-center gap-2 whitespace-nowrap"
+            >
+              <Icon.history size={18} />
+              {el.timeline.title}
+            </TimelineButton>
+            <Link href={`/customers/${id}/edit`} className="btn-secondary">
+              <Icon.pen size={18} />
+              {el.customer.edit}
+            </Link>
+          </div>
         }
       >
         {el.hub.title}

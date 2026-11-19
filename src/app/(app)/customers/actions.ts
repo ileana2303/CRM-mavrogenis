@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
 import type { ActivityType, DoctorRank } from "@/server/domain/types";
-import { createDoctor, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
+import { createDoctor, customerTimeline, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
 import { addTask, closeWithNextAction, completeTask, reopenTask, taskTimeline } from "@/server/services/task-service";
@@ -197,6 +197,18 @@ export async function taskTimelineAction(taskId: string): Promise<{ entries: Tim
   } catch (e) {
     unstable_rethrow(e); // expired session → /login
     console.error("[customers] task timeline failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** «Χρονολόγιο» on the customer hub: api.crm.customers/getTimeline, loaded when the modal opens. */
+export async function customerTimelineAction(doctorId: string): Promise<{ entries: TimelineEntry[] } | { error: string }> {
+  await requireUser();
+  try {
+    return { entries: await customerTimeline(doctorId) };
+  } catch (e) {
+    unstable_rethrow(e); // expired session → /login
+    console.error("[customers] customer timeline failed", e);
     return { error: e instanceof Error ? e.message : String(e) };
   }
 }
