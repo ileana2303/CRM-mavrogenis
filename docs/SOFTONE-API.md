@@ -206,8 +206,9 @@ Tapping the number dials (`tel:`) and is remembered for 3 h in the browser sessi
 «Καταγραφή κλήσης» (also a small pen next to the number). Saves:
 1. `setData` `SOCALL` `{ "SOACTION": [{ "SERIES": 1000, "TRDR", "ACTPRSN", "FROMDATE": <call time>, "COMMENTS", "ACTSTATUS": 3 }] }`
 2. optional follow-up exactly as §8a with `"SOACTIONS": <the new SOCALL>` — so the call → follow-up chain shows in getTimeline.
-**Not verified yet:** ACTSTATUS 3 on create of a SOCALL (works on SOTASK). If only step 2 fails the call stays saved and the
-error says so (no duplicate on retry).
+**Verified 2026-11-19** through the app: SOCALL 9199 (ΤΗΛC000004) created with ACTSTATUS 3, FROMDATE = call time, COMMENTS;
+SoftOne itself stamps FINALDATE = insert time on a call created done. If only step 2 fails the call stays saved and the error
+says so (no duplicate on retry).
 
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
