@@ -167,9 +167,11 @@ One step: create the follow-up, **then** close the Εκκρεμότητα (`ACTS
 | Email | `SOEMAIL` | 1003 (`S1_EMAIL_SERIES`) |
 | Συνάντηση | `SOMEETING` | 2003 (`S1_MEETING_SERIES`) — same series as the dashboard's appointments |
 
-Payload: `{ "SOACTION": [{ "SERIES", "TRDR", "ACTPRSN": <prsn>, "FROMDATE": "yyyy-mm-dd hh:mm" (Athens), "COMMENTS" }] }`.
-**Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default, no link
-to the source SOTASK (no field known for it). Not verified against SoftOne yet.
+Payload: `{ "SOACTION": [{ "SERIES", "TRDR", "ACTPRSN": <prsn>, "FROMDATE": "yyyy-mm-dd hh:mm" (Athens), "COMMENTS",
+"SOACTIONS": <soaction of the Εκκρεμότητα> }] }` — `SOACTION.SOACTIONS` links the follow-up to its source (your field, 2026-11-19).
+Sent with the object's default form (no `form`).
+**Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default.
+Not verified against SoftOne yet.
 
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
