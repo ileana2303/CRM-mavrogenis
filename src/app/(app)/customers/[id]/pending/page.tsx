@@ -8,7 +8,8 @@ import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { NextActionButton } from "@/components/next-action-button";
-import { addTaskAction, nextActionAction, toggleTaskAction } from "../../actions";
+import { TaskTimelineButton } from "@/components/task-timeline-button";
+import { addTaskAction, nextActionAction, taskTimelineAction, toggleTaskAction } from "../../actions";
 
 export const metadata = { title: el.pending.title };
 
@@ -85,6 +86,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                   </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-1">
+                      <TaskTimelineButton taskId={t.id} load={taskTimelineAction} />
                       <ActionForm action={toggleTaskAction}>
                         <input type="hidden" name="id" value={t.id} />
                         <input type="hidden" name="doctorId" value={id} />

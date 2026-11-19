@@ -8,8 +8,8 @@ import type { ActivityType, DoctorRank } from "@/server/domain/types";
 import { createDoctor, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
-import { addTask, closeWithNextAction, completeTask, reopenTask } from "@/server/services/task-service";
-import { NEXT_ACTION_KINDS, type NextActionKind } from "@/server/domain/types";
+import { addTask, closeWithNextAction, completeTask, reopenTask, taskTimeline } from "@/server/services/task-service";
+import { NEXT_ACTION_KINDS, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -187,6 +187,17 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   revalidatePath(`/customers/${doctorId}/pending`);
   revalidatePath("/");
   redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
+}
+
+/** «Ιστορικό» on a pending row: the chain from api.crm.actions/getTimeline, loaded when the modal opens. */
+export async function taskTimelineAction(taskId: string): Promise<{ entries: TimelineEntry[] } | { error: string }> {
+  await requireUser();
+  try {
+    return { entries: await taskTimeline(taskId) };
+  } catch (e) {
+    console.error("[customers] task timeline failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 export async function setOfferClosedAction(fd: FormData): Promise<ActionResult> {
