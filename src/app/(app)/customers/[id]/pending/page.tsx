@@ -6,7 +6,8 @@ import { ActionForm } from "@/components/action-form";
 import { fmtDate, todayIso } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
-import { addTaskAction, toggleTaskAction } from "../../actions";
+import { NextActionButton } from "@/components/next-action-button";
+import { addTaskAction, nextActionAction, toggleTaskAction } from "../../actions";
 
 export const metadata = { title: el.pending.title };
 
@@ -80,13 +81,16 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                     {t.view === "OVERDUE" ? <Badge tone="red">{el.pending.statusOverdue}</Badge> : t.view === "DONE" ? <Badge tone="green">{el.pending.statusDone}</Badge> : <Badge tone="blue">{el.pending.statusOpen}</Badge>}
                   </td>
                   <td className="text-right">
-                    <ActionForm action={toggleTaskAction}>
-                      <input type="hidden" name="id" value={t.id} />
-                      <input type="hidden" name="doctorId" value={id} />
-                      <input type="hidden" name="filter" value={filter} />
-                      <input type="hidden" name="op" value={t.status === "DONE" ? "reopen" : "done"} />
-                      <button className="btn-ghost min-h-9 text-sm whitespace-nowrap">{t.status === "DONE" ? el.pending.reopen : `✓ ${el.pending.complete}`}</button>
-                    </ActionForm>
+                    <div className="flex justify-end gap-1">
+                      <ActionForm action={toggleTaskAction}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <input type="hidden" name="doctorId" value={id} />
+                        <input type="hidden" name="filter" value={filter} />
+                        <input type="hidden" name="op" value={t.status === "DONE" ? "reopen" : "done"} />
+                        <button className="btn-ghost min-h-9 text-sm whitespace-nowrap">{t.status === "DONE" ? el.pending.reopen : `✓ ${el.pending.complete}`}</button>
+                      </ActionForm>
+                      {t.status !== "DONE" && <NextActionButton action={nextActionAction} taskId={t.id} doctorId={id} filter={filter} title={t.title} />}
+                    </div>
                   </td>
                 </tr>
               ))}

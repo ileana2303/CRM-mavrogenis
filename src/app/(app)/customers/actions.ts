@@ -8,7 +8,8 @@ import type { ActivityType, DoctorRank } from "@/server/domain/types";
 import { createDoctor, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
-import { addTask, completeTask, reopenTask } from "@/server/services/task-service";
+import { addTask, closeWithNextAction, completeTask, reopenTask } from "@/server/services/task-service";
+import { NEXT_ACTION_KINDS, type NextActionKind } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -168,6 +169,23 @@ export async function toggleTaskAction(fd: FormData): Promise<ActionResult> {
   const failed = await attempt("toggle task", () => (str(fd, "op") === "reopen" ? reopenTask(id) : completeTask(id)));
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
+  redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
+}
+
+/** «→ Επόμενη ενέργεια» on a pending row: new SOCALL/SOEMAIL/SOMEETING, then the Εκκρεμότητα is closed. */
+export async function nextActionAction(fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const taskId = str(fd, "taskId");
+  const doctorId = str(fd, "doctorId");
+  const kind = str(fd, "kind") as NextActionKind;
+  const date = str(fd, "date");
+  const time = str(fd, "time");
+  if (!NEXT_ACTION_KINDS.includes(kind)) return { error: el.pending.nextKindMissing };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
+  const failed = await attempt("next action", () => closeWithNextAction(taskId, { kind, doctorId, at: `${date} ${time}`, comments: str(fd, "comments") }));
+  if (failed) return failed;
+  revalidatePath(`/customers/${doctorId}/pending`);
+  revalidatePath("/");
   redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
 }
 
