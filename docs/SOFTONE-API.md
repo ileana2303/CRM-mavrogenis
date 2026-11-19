@@ -146,16 +146,20 @@ Offer row: `{ findoc, fincode, trdr, cccproject, cccversion, trndate, sumamnt, c
 | step | call |
 |---|---|
 | create | `setData` object `SOTASK`, `{ "SOACTION": [{ "SERIES": 3000, "TRDR", "PRJC"?: <project, optional>, "ACTPRSN": <prsn>, "COMMENTS": <ενέργεια>, "DUEDATE": "yyyy-mm-dd" (προθεσμία), "ACTSTATUS": 1 }] }` — verified (9179, deleted) |
-| complete / reopen | `setData` `key: <soaction>`, `{ "SOACTION": [{ "ACTSTATUS": 3 }] }` (1 to reopen) — verified |
-| read | `api.crm.actions/getPendings` `{ trdr, prsn, actStatus?: "1,2,3" }` → `{ soaction, series, trdr, trdr_customer_code, trdr_customer_name, prjc?, prjc_prjc_code?, prjc_prjc_name?, actStatus, comments, dueDate }` plus a top-level `projects` array (the customer's projects → the picker) — checked 2026-11-19 |
+| complete / reopen | `setData` **on the item's own object** (SOTASK / SOCALL / SOEMAIL / SOMEETING), `key: <soaction>`, `{ "SOACTION": [{ "ACTSTATUS": 3 }] }` (1 to reopen) — verified on SOTASK |
+| read (customer) | `api.crm.actions/getPendings` `{ trdr, actStatus }` (no `prsn` → every salesperson's items) + top-level `projects` array (the picker) |
+| read («Η μέρα μου») | `api.crm.actions/getPendings` `{ prsn, actStatus: "0,1,2,5,6", toDate: "yyyy-mm-dd" }` → open items dated ≤ toDate, all customers |
+
+Row (extended 2026-11-19): `{ soaction, soredir, series, trdr?, trdr_customer_code, trdr_customer_name, prjc?, prjc_prjc_code?,
+prjc_prjc_name?, actStatus, comments?, dueDate? (tasks), fromDate, actPrsn?, actPrsn_prsnin_name, actPrsn_prsnin_name2 }`.
+- Type from `soredir`: 1 call (SOCALL), 2 meeting (SOMEETING), 3 task (SOTASK); email by series 1003 (its soredir not seen yet). An
+  unknown soredir is an error on purpose – tell me the object and I add it.
+- Date: tasks use `dueDate` (else `fromDate`), the others `fromDate` (date + time).
+- All series come back, including old ones (1001, 1002, 1004–1006, 2000 — open items from 2022–2025). They are shown as they are.
+- **SOMEETING 2001 (Άφιξη/Αναχώρηση) also comes back; the app drops it** by `S1_ARRIVAL_SERIES`. Better removed in the endpoint.
 
 ACTSTATUS: 0 Αδιάφορο · 1 Προς έναρξη · 2 Σε εξέλιξη · 3 Ολοκληρώθηκε · 4 Ακυρώθηκε · 5 Σε αναμονή · 6 Σε αναβολή.
 CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
-
-**Needed from you in `getPendings`:**
-1. `trdr` optional — the Αναφορά Ημέρας lists pending items per salesperson (`prsn` only). Today a missing `trdr` gives `Invalid column name 'undefined'`.
-2. Add to the row: `dueDate` (προθεσμία → overdue logic), `trdr`, `actPrsn`, `soActionCode`, `trnDate`. Without `dueDate` every item shows as due "today".
-3. ~~Project link~~ done 2026-11-19: `SOACTION.PRJC` (standard field, not CCCPROJECT).
 
 ### 8a. Επόμενη ενέργεια (2026-11-19) — row button «→ Επόμενη ενέργεια» next to «✓ Ολοκλήρωση»
 
