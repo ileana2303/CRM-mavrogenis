@@ -147,7 +147,7 @@ Offer row: `{ findoc, fincode, trdr, cccproject, cccversion, trndate, sumamnt, c
 |---|---|
 | create | `setData` object `SOTASK`, `{ "SOACTION": [{ "SERIES": 3000, "TRDR", "PRJC"?: <project, optional>, "ACTPRSN": <prsn>, "COMMENTS": <ενέργεια>, "DUEDATE": "yyyy-mm-dd" (προθεσμία), "ACTSTATUS": 1 }] }` — verified (9179, deleted) |
 | complete / reopen | `setData` `key: <soaction>`, `{ "SOACTION": [{ "ACTSTATUS": 3 }] }` (1 to reopen) — verified |
-| read | `api.crm.actions/getPendings` `{ trdr, prsn, actStatus?: "1,2,3" }` → `{ soaction, series, actStatus, comments, prjc }` — `prjc` read as the project link; its name comes from `api.crm.customers/projects` |
+| read | `api.crm.actions/getPendings` `{ trdr, prsn, actStatus?: "1,2,3" }` → `{ soaction, series, trdr, trdr_customer_code, trdr_customer_name, prjc?, prjc_prjc_code?, prjc_prjc_name?, actStatus, comments, dueDate }` plus a top-level `projects` array (the customer's projects → the picker) — checked 2026-11-19 |
 
 ACTSTATUS: 0 Αδιάφορο · 1 Προς έναρξη · 2 Σε εξέλιξη · 3 Ολοκληρώθηκε · 4 Ακυρώθηκε · 5 Σε αναμονή · 6 Σε αναβολή.
 CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
