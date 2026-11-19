@@ -77,7 +77,12 @@ export function Timeline({ entries, currentId }: { entries: TimelineEntry[]; cur
                         {status && (
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_TONE[e.status!] ?? "bg-slate-50 text-slate-600 ring-slate-200"}`}>{status}</span>
                         )}
-                        {e.amount !== undefined && <span className="text-sm font-semibold tabular-nums text-brand-800">{fmtEur(e.amount)}</span>}
+                        {e.amount !== undefined && (
+                          <span className="text-sm tabular-nums">
+                            {e.amountBasis && <span className="text-[var(--muted)]">{el.timeline.amountBasis[e.amountBasis]}: </span>}
+                            <span className="font-semibold text-brand-800">{fmtEur(e.amount, true)}</span>
+                          </span>
+                        )}
                       </div>
                     )}
                     {e.comments && <p className="mt-1.5 whitespace-pre-line break-words text-sm text-slate-700">{e.comments}</p>}

@@ -599,7 +599,7 @@ export function rowToTimelineEntry(r: S1TimelineRow): TimelineEntry {
  * fprms (SoftOne's type name) is shown as is.
  */
 const KIND_BY_SOREDIR: Record<string, TimelineKind> = { "1": "CALL", "2": "MEETING", "3": "TASK" };
-export function rowToDocTimelineEntry(r: S1TimelineRow): TimelineEntry {
+export function rowToDocTimelineEntry(r: S1TimelineRow, amountBasis: "NET" | "TOTAL"): TimelineEntry {
   const id = pickCol(r, "id");
   const at = s1DateTimeToIso(pickCol(r, "trndate"));
   if (!id || !at) throw new Error(`getTimeline: row without id/trndate: ${JSON.stringify(r).slice(0, 200)}`);
@@ -615,7 +615,7 @@ export function rowToDocTimelineEntry(r: S1TimelineRow): TimelineEntry {
     code: pickCol(r, "code") ?? "",
     at,
     comments: pickCol(r, "comments") ?? "",
-    amount: Number.isFinite(amount) && amount !== 0 ? amount : undefined,
+    ...(Number.isFinite(amount) && amount !== 0 ? { amount, amountBasis } : {}),
   };
 }
 

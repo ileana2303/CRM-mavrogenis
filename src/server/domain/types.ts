@@ -383,6 +383,8 @@ export interface TimelineEntry {
   comments: string;
   /** document amount (offers) */
   amount?: number;
+  /** what `amount` is: the project timeline sends the net value, the customer timeline the total (his design, 2026-11-19) */
+  amountBasis?: "NET" | "TOTAL";
 }
 
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */

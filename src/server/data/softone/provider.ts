@@ -130,7 +130,8 @@ export const softOneProvider: DataProvider = {
     async timeline(doctorId) {
       if (!/^\d+$/.test(doctorId)) throw new Error(`Μη έγκυρος πελάτης: ${doctorId}`);
       const res = await js<S1TimelineRow[]>("api.crm.customers", "getTimeline", { trdr: Number(doctorId) });
-      return (res.data ?? []).map(rowToDocTimelineEntry);
+      // AMNT here is the document total (VAT included); the project timeline sends the net value
+      return (res.data ?? []).map((r) => rowToDocTimelineEntry(r, "TOTAL"));
     },
     async search(q: DoctorSearch) {
       // S1_DOCTORS_ONLY=0 searches all customers – useful until CCCISDOCTOR is set on the doctors
@@ -255,7 +256,8 @@ export const softOneProvider: DataProvider = {
     async timeline(projectId) {
       if (!/^\d+$/.test(projectId)) throw new Error(`Μη έγκυρο project: ${projectId}`);
       const res = await js<S1TimelineRow[]>("api.crm.projects", "getTimeline", { prjc: Number(projectId) });
-      return (res.data ?? []).map(rowToDocTimelineEntry);
+      // AMNT here is the net value; the customer timeline sends the total
+      return (res.data ?? []).map((r) => rowToDocTimelineEntry(r, "NET"));
     },
     listByUser: todo("projects.listByUser"),
     listAll: todo("projects.listAll"),

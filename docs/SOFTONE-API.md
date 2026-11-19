@@ -193,6 +193,7 @@ Opened by the «Χρονολόγιο» button next to the stage badge on the pro
 `{ trdr }` → `data: [{ COMPANY, OBJTYPE ("1" document / "2" action), ID, SOREDIR, SOSOURCE, TFPRMS, TRNDATE, CODE, COMMENTS?, AMNT,
 FPRMS, IMAGE, REDIR }]`, newest first – same meaning as 8c, upper-case columns, `OBJTYPE` instead of `unit` (checked on 34583, 13 rows).
 Opened by the «Χρονολόγιο» button next to «Επεξεργασία» on the customer hub (modal, loaded on open).
+**AMNT differs by design:** the project timeline sends the net value, the customer timeline the total (VAT included). The app labels them «Καθαρή αξία» / «Σύνολο».
 
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
