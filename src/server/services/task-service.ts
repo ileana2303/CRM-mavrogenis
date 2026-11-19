@@ -65,6 +65,21 @@ export async function closeWithNextAction(taskId: string, taskKind: ActionKind, 
   return created;
 }
 
+/**
+ * «Καταγραφή κλήσης»: the call that just happened (done SOCALL) and, optionally, its follow-up linked to it
+ * (SOACTIONS = the call). If only the follow-up fails, the call is saved – NextActionPartialError says so.
+ */
+export async function logCall(doctorId: string, at: string, comments: string, next?: Omit<NewNextAction, "doctorId" | "fromTaskId">) {
+  const call = await db().tasks.logCall({ doctorId, at, comments });
+  if (!next) return { call };
+  try {
+    const followUp = await db().tasks.createNextAction({ ...next, doctorId, fromTaskId: call.id });
+    return { call, followUp };
+  } catch (e) {
+    throw new NextActionPartialError(`Η κλήση καταγράφηκε (SOACTION ${call.id}), αλλά η επόμενη ενέργεια δεν αποθηκεύτηκε: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 /** The chain of actions linked to an item (api.crm.actions/getTimeline), newest first. */
 export function taskTimeline(id: string) {
   return db().tasks.timeline(id);

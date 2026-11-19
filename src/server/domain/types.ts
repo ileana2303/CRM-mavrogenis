@@ -397,6 +397,14 @@ export interface TimelineEntry {
   amountBasis?: "NET" | "TOTAL";
 }
 
+/** «Καταγραφή κλήσης»: a call that already happened → SOCALL, ACTSTATUS 3 */
+export interface NewCallLog {
+  doctorId: string;
+  /** when the call was placed – Athens wall-clock "yyyy-mm-dd hh:mm" */
+  at: string;
+  comments: string;
+}
+
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */
 export type NextActionKind = "CALL" | "EMAIL" | "MEETING";
 /** An action in SoftOne: SOTASK / SOCALL / SOEMAIL / SOMEETING */

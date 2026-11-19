@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, ActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NewCallLog, NextActionKind, ActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -565,6 +565,16 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
   if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
   return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
+}
+
+/**
+ * «Καταγραφή κλήσης» (after tapping the customer's phone): a call that already happened → SOCALL in the call series,
+ * ACTSTATUS 3, FROMDATE = when it was placed. Same header fields as the next-action SOCALL (verified on 9194).
+ * ASSUMED: ACTSTATUS 3 accepted on create (it is on SOTASK).
+ */
+export function callLogToSetData(c: NewCallLog, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(c.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${c.at}`);
+  return { SOACTION: [{ SERIES: series, TRDR: Number(c.doctorId), ACTPRSN: Number(prsn), FROMDATE: c.at, COMMENTS: c.comments, ACTSTATUS: TASK_STATUS_DONE }] };
 }
 
 /**

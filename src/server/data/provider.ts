@@ -28,6 +28,7 @@ import type {
   Target,
   Task,
   NewNextAction,
+  NewCallLog,
   ActionKind,
   TimelineEntry,
   User,
@@ -131,6 +132,8 @@ export interface TasksRepo {
   update(id: string, patch: Partial<Task>, kind?: ActionKind): Promise<Task>;
   /** «Επόμενη ενέργεια»: new SOCALL / SOEMAIL / SOMEETING for the customer → its SOACTION id */
   createNextAction(a: NewNextAction): Promise<{ id: string }>;
+  /** «Καταγραφή κλήσης»: a done SOCALL in the call series → its SOACTION id */
+  logCall(c: NewCallLog): Promise<{ id: string }>;
   /** api.crm.actions/getTimeline {soaction}: the chain of actions linked to it, newest first */
   timeline(soaction: string): Promise<TimelineEntry[]>;
 }
