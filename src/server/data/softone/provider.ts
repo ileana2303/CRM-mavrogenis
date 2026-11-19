@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -24,6 +24,11 @@ export const s1 = new S1Client(s1ConfigFromEnv());
 const offerSeries = () => Number(process.env.S1_OFFER_SERIES ?? 7015);
 const arrivalSeries = () => Number(process.env.S1_ARRIVAL_SERIES ?? 2001);
 const taskSeries = () => Number(process.env.S1_TASK_SERIES ?? 3000);
+const nextActionSeries = {
+  CALL: () => Number(process.env.S1_CALL_SERIES ?? 1000),
+  EMAIL: () => Number(process.env.S1_EMAIL_SERIES ?? 1003),
+  MEETING: () => Number(process.env.S1_MEETING_SERIES ?? 2003),
+};
 /** statuses shown in the CRM: everything except 4 Ακυρώθηκε */
 const TASK_STATUSES = "0,1,2,3,5,6";
 
@@ -319,6 +324,13 @@ export const softOneProvider: DataProvider = {
       const cid = await clientId();
       await s1.setData(cid, "SOTASK", taskPatchToSetData(patch), Number(id));
       return { id, doctorId: "", userId: "", title: "", dueDate: "", status: "OPEN", source: "MANUAL", ...patch } as Task;
+    },
+    // Επόμενη ενέργεια = SOCALL 1000 / SOEMAIL 1003 / SOMEETING 2003 (his mapping 2026-11-19)
+    async createNextAction(a) {
+      const cid = await clientId();
+      const prsn = await sessionPrsn();
+      const res = await s1.setData(cid, NEXT_ACTION_OBJECT[a.kind], nextActionToSetData(a, prsn, nextActionSeries[a.kind]()));
+      return { id: String(res.id) };
     },
   },
   // Άφιξη / Αναχώρηση = SOMEETING series 2001 (decided 2026-11-10): FROMDATE on arrival, FINALDATE on departure.

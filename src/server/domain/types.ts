@@ -360,6 +360,17 @@ export interface Task {
   source: TaskSource;
 }
 
+/** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */
+export type NextActionKind = "CALL" | "EMAIL" | "MEETING";
+export const NEXT_ACTION_KINDS: readonly NextActionKind[] = ["CALL", "EMAIL", "MEETING"];
+export interface NewNextAction {
+  kind: NextActionKind;
+  doctorId: string;
+  /** Athens wall-clock "yyyy-mm-dd hh:mm" */
+  at: string;
+  comments: string;
+}
+
 export interface CheckIn {
   id: string;
   doctorId: string;

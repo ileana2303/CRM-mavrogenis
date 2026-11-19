@@ -27,6 +27,7 @@ import type {
   SalesTurnover,
   Target,
   Task,
+  NewNextAction,
   User,
   Visit,
 } from "../domain/types";
@@ -118,6 +119,8 @@ export interface TasksRepo {
   listByUser(userId: string): Promise<Task[]>;
   create(t: NewEntity<Task>): Promise<Task>;
   update(id: string, patch: Partial<Task>): Promise<Task>;
+  /** «Επόμενη ενέργεια»: new SOCALL / SOEMAIL / SOMEETING for the customer → its SOACTION id */
+  createNextAction(a: NewNextAction): Promise<{ id: string }>;
 }
 
 export interface CheckInsRepo {

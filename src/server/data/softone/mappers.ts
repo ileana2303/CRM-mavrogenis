@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -547,6 +547,18 @@ export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<R
   if (patch.dueDate !== undefined) h.DUEDATE = patch.dueDate;
   return { SOACTION: [h] };
 }
+/**
+ * Επόμενη ενέργεια → new SOACTION in the object/series of its kind (his mapping 2026-11-19):
+ * CALL = SOCALL 1000, EMAIL = SOEMAIL 1003, MEETING = SOMEETING 2003.
+ * TRDR, ACTPRSN = login prsn, FROMDATE "yyyy-mm-dd hh:mm" (Athens), COMMENTS. ACTSTATUS left to the series default.
+ * ASSUMED (not yet confirmed by him): FROMDATE as the date field, no ACTSTATUS, no link to the source SOTASK.
+ */
+export const NEXT_ACTION_OBJECT: Record<NextActionKind, "SOCALL" | "SOEMAIL" | "SOMEETING"> = { CALL: "SOCALL", EMAIL: "SOEMAIL", MEETING: "SOMEETING" };
+export function nextActionToSetData(a: NewNextAction, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
+  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments }] };
+}
+
 /** Row of api.crm.actions/getPendings: { soaction, series, actStatus, comments, finalDate?, trdr?, actPrsn? } */
 export type S1PendingRow = Record<string, unknown>;
 export function rowToTask(r: S1PendingRow, fallbackDoctorId: string, fallbackUserId: string): Task | null {

@@ -1,7 +1,7 @@
 import { athensToday } from "@/lib/athens";
 import { db } from "../data";
 import type { Session } from "../auth/jwt";
-import type { Task, TaskStatusView } from "../domain/types";
+import type { NewNextAction, Task, TaskStatusView } from "../domain/types";
 
 const today = () => athensToday();
 
@@ -29,6 +29,23 @@ export function addTask(doctorId: string, title: string, dueDate: string, user: 
 
 export function completeTask(id: string) {
   return db().tasks.update(id, { status: "DONE", doneAt: new Date().toISOString() });
+}
+
+export class NextActionPartialError extends Error {}
+
+/**
+ * «Επόμενη ενέργεια»: creates the follow-up SOCALL/SOEMAIL/SOMEETING, then closes the Εκκρεμότητα (ACTSTATUS 3).
+ * Create first: if SoftOne refuses it the task stays open. If only the close fails, the follow-up exists –
+ * NextActionPartialError says so, so the user doesn't press again and create a duplicate.
+ */
+export async function closeWithNextAction(taskId: string, a: NewNextAction) {
+  const created = await db().tasks.createNextAction(a);
+  try {
+    await completeTask(taskId);
+  } catch (e) {
+    throw new NextActionPartialError(`Η επόμενη ενέργεια δημιουργήθηκε (SOACTION ${created.id}), αλλά η εκκρεμότητα δεν έκλεισε: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return created;
 }
 
 export function reopenTask(id: string) {
