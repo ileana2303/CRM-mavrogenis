@@ -591,20 +591,25 @@ export function rowToTimelineEntry(r: S1TimelineRow): TimelineEntry {
 }
 
 /**
- * Row of api.crm.projects/getTimeline {prjc} (checked 2026-11-19 on 6065/6071):
- * { unit: "crm" | "emporiko", id, soredir, sosource (2021 action / 1351 offer), trndate, code, comments?, amnt, fprms, image }.
- * soredir seen: 1 call, 2 meeting, 3 task. fprms (SoftOne's type name) is shown as is.
+ * Row of the document timelines (checked 2026-11-19), column case differs, pickCol ignores it:
+ *   api.crm.projects/getTimeline {prjc}  → { unit: "crm" | "emporiko", id, soredir, sosource, trndate, code, comments?, amnt, fprms, image }
+ *   api.crm.customers/getTimeline {trdr} → { OBJTYPE: "1" document | "2" action, ID, SOREDIR, SOSOURCE, TFPRMS, TRNDATE, CODE,
+ *                                            COMMENTS?, AMNT, FPRMS, IMAGE, REDIR, COMPANY }
+ * soredir seen: 1 call, 2 meeting, 3 task (0 on documents). Commercial rows (unit emporiko / OBJTYPE 1) = offers.
+ * fprms (SoftOne's type name) is shown as is.
  */
 const KIND_BY_SOREDIR: Record<string, TimelineKind> = { "1": "CALL", "2": "MEETING", "3": "TASK" };
-export function rowToProjectTimelineEntry(r: S1TimelineRow): TimelineEntry {
+export function rowToDocTimelineEntry(r: S1TimelineRow): TimelineEntry {
   const id = pickCol(r, "id");
   const at = s1DateTimeToIso(pickCol(r, "trndate"));
-  if (!id || !at) throw new Error(`projects/getTimeline: row without id/trndate: ${JSON.stringify(r).slice(0, 200)}`);
+  if (!id || !at) throw new Error(`getTimeline: row without id/trndate: ${JSON.stringify(r).slice(0, 200)}`);
   const unit = pickCol(r, "unit")?.toLowerCase();
-  const kind: TimelineKind = unit === "emporiko" ? "OFFER" : (KIND_BY_SOREDIR[pickCol(r, "soredir") ?? ""] ?? "OTHER");
+  const commercial = unit === "emporiko" || pickCol(r, "objtype") === "1";
+  const kind: TimelineKind = commercial ? "OFFER" : (KIND_BY_SOREDIR[pickCol(r, "soredir") ?? ""] ?? "OTHER");
   const amount = Number(pickCol(r, "amnt") ?? NaN);
   return {
-    id: `${unit ?? ""}:${id}`,
+    // action and document ids are separate number ranges
+    id: `${commercial ? "doc" : "act"}:${id}`,
     kind,
     label: pickCol(r, "fprms"),
     code: pickCol(r, "code") ?? "",

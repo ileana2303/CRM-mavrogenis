@@ -63,6 +63,8 @@ export interface DoctorsRepo {
   update(id: string, patch: Partial<Doctor>): Promise<Doctor>;
   saveConsent(c: NewEntity<Consent>): Promise<Consent>;
   getConsent(doctorId: string): Promise<Consent | null>;
+  /** api.crm.customers/getTimeline {trdr}: the customer's actions and documents, newest first */
+  timeline(doctorId: string): Promise<TimelineEntry[]>;
 }
 
 export interface EquipmentRepo {

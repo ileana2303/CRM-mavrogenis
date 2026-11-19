@@ -29,6 +29,11 @@ export function getConsent(doctorId: string) {
   return db().doctors.getConsent(doctorId);
 }
 
+/** The customer's actions and documents (api.crm.customers/getTimeline), newest first. */
+export function customerTimeline(doctorId: string) {
+  return db().doctors.timeline(doctorId);
+}
+
 export function saveConsent(
   doctorId: string,
   signerName: string,
