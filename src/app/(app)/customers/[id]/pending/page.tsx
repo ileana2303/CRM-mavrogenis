@@ -7,7 +7,6 @@ import { NewTaskButton } from "@/components/new-task-button";
 import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
-import { listProjectSummaries } from "@/server/services/project-service";
 import { NextActionButton } from "@/components/next-action-button";
 import { addTaskAction, nextActionAction, toggleTaskAction } from "../../actions";
 
@@ -21,7 +20,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const filter = (["open", "overdue", "done", "all"].includes(sp.filter ?? "") ? sp.filter : "open") as Filter;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
-  const [{ tasks, counts }, projects] = await Promise.all([pendingForDoctor(id), listProjectSummaries(id)]);
+  const { tasks, counts, projects } = await pendingForDoctor(id);
   const projectById = new Map(projects.map((p) => [p.id, p]));
   // only selectable (isActive) projects are offered for new tasks; existing links show whatever SoftOne has
   const projectOptions = projects.filter((p) => p.active).map((p) => ({ value: p.id, label: p.title, hint: p.code }));

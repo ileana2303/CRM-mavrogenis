@@ -116,6 +116,8 @@ export interface OffersRepo {
 
 export interface TasksRepo {
   listByDoctor(doctorId: string): Promise<Task[]>;
+  /** api.crm.actions/getPendings {trdr}: the tasks (`data`) and the customer's projects (top-level `projects`) in one call */
+  pendingsByDoctor(doctorId: string): Promise<{ tasks: Task[]; projects: ProjectSummary[] }>;
   listByUser(userId: string): Promise<Task[]>;
   create(t: NewEntity<Task>): Promise<Task>;
   update(id: string, patch: Partial<Task>): Promise<Task>;

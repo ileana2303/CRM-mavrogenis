@@ -11,10 +11,11 @@ export function taskView(t: Task): TaskStatusView {
 }
 
 export async function pendingForDoctor(doctorId: string) {
-  const tasks = await db().tasks.listByDoctor(doctorId);
+  const { tasks, projects } = await db().tasks.pendingsByDoctor(doctorId);
   const views = tasks.map((t) => ({ ...t, view: taskView(t) }));
   return {
     tasks: views,
+    projects,
     counts: {
       open: views.filter((t) => t.status === "OPEN").length,
       overdue: views.filter((t) => t.view === "OVERDUE").length,

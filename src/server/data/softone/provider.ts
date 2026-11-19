@@ -304,9 +304,22 @@ export const softOneProvider: DataProvider = {
   // Εκκρεμότητες = SOTASK series 3000 (decided 2026-11-10); reads via api.crm.actions/getPendings
   tasks: {
     async listByDoctor(doctorId): Promise<Task[]> {
+      return (await this.pendingsByDoctor(doctorId)).tasks;
+    },
+    // with trdr, getPendings also returns the customer's projects as a top-level `projects` array (same rows as
+    // api.crm.customers/projects) – the picker for a new Εκκρεμότητα. Rows carry no per-task prjc yet (checked 2026-11-19).
+    async pendingsByDoctor(doctorId) {
       const prsn = await sessionPrsn();
-      const res = await js<S1PendingRow[]>("api.crm.actions", "getPendings", { trdr: Number(doctorId), prsn: Number(prsn), actStatus: TASK_STATUSES });
-      return (res.data ?? []).map((r) => rowToTask(r, doctorId, prsn)).filter((t): t is Task => !!t);
+      const [res, boot] = await Promise.all([
+        js<S1PendingRow[]>("api.crm.actions", "getPendings", { trdr: Number(doctorId), prsn: Number(prsn), actStatus: TASK_STATUSES }),
+        bootstrap(),
+      ]);
+      const lookups = { states: nameById(boot.prjc?.prjState), categories: nameById(boot.prjc?.prjCategory) };
+      const projectRows = (res as { projects?: S1ProjectRow[] }).projects ?? [];
+      return {
+        tasks: (res.data ?? []).map((r) => rowToTask(r, doctorId, prsn)).filter((t): t is Task => !!t),
+        projects: projectRows.map((r) => rowToProjectSummary(r, lookups)),
+      };
     },
     async listByUser(userId): Promise<Task[]> {
       // needs getPendings without trdr (owner to make it optional)
