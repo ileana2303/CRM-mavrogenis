@@ -364,8 +364,6 @@ export const el = {
     noProject: "Χωρίς project",
     history: "Ιστορικό",
     historyTitle: "Ιστορικό ενεργειών",
-    historyEmpty: "Δεν υπάρχουν συνδεδεμένες ενέργειες.",
-    historyError: "Το SoftOne δεν επέστρεψε το ιστορικό",
     newTitle: "Ενέργεια",
     newDue: "Προθεσμία",
     empty: "Δεν υπάρχουν εκκρεμότητες.",

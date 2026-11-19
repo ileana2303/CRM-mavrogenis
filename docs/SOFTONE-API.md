@@ -186,7 +186,7 @@ FROMDATE 20:00) – SOACTIONS, FROMDATE and PRJC (both on project 6071) are stor
 `{ prjc }` → `data: [{ unit: "crm" | "emporiko", id, soredir, sosource, trndate, code, comments?, amnt, fprms, image }]`,
 newest first: the project's actions (unit crm, sosource 2021) and offers (unit emporiko, sosource 1351).
 soredir seen: 1 call, 2 meeting, 3 task (email not seen yet → shown with SoftOne's `fprms` name and a neutral icon).
-Shown as the «Χρονολόγιο» card on the project screen.
+Opened by the «Χρονολόγιο» button next to the stage badge on the project screen (modal, loaded on open).
 
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 

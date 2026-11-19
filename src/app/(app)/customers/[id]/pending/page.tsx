@@ -8,7 +8,8 @@ import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { NextActionButton } from "@/components/next-action-button";
-import { TaskTimelineButton } from "@/components/task-timeline-button";
+import { TimelineButton } from "@/components/timeline-button";
+import { Icon } from "@/components/icons";
 import { addTaskAction, nextActionAction, taskTimelineAction, toggleTaskAction } from "../../actions";
 
 export const metadata = { title: el.pending.title };
@@ -73,9 +74,19 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
               {shown.map((t) => (
                 <tr key={t.id}>
                   <td>
-                    <TaskTimelineButton taskId={t.id} load={taskTimelineAction}>
-                      {t.title}
-                    </TaskTimelineButton>
+                    <TimelineButton
+                      id={t.id}
+                      currentId={t.id}
+                      load={taskTimelineAction}
+                      title={el.pending.historyTitle}
+                      label={el.pending.history}
+                      className="group inline-flex min-h-9 items-start gap-1.5 rounded-lg text-left font-medium text-slate-900 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                    >
+                      <span className="group-hover:underline decoration-brand-300 underline-offset-4">{t.title}</span>
+                      <span className="mt-0.5 shrink-0 text-brand-500 opacity-70 group-hover:opacity-100">
+                        <Icon.history size={16} />
+                      </span>
+                    </TimelineButton>
                     {t.projectId && (
                       <Link href={`/customers/${id}/projects/${t.projectId}`} className="text-xs text-brand-700 hover:underline">
                         {el.pending.project}: {t.projectName ?? projectById.get(t.projectId)?.title ?? `#${t.projectId}`}

@@ -1,13 +1,14 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
 import type { FollowUpContactMethod, FollowUpResult, NextAction, OfferCalc, ProductHit, ProjectType } from "@/server/domain/types";
-import { addFollowUp, closeProject, createProject, createProjectForDoctor, calculateOfferForProject, createOfferForProject, getProject, searchProducts, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
+import { addFollowUp, closeProject, createProject, createProjectForDoctor, calculateOfferForProject, createOfferForProject, getProject, projectTimeline, searchProducts, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
 import { getOffer, markOfferSent } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
+import type { TimelineResult } from "@/components/timeline-button";
 import { el } from "@/lib/i18n/el";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -252,3 +253,15 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
   redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer${stageFailed ? "&stage=failed" : ""}`);
 }
 
+
+/** «Χρονολόγιο» on the project screen: api.crm.projects/getTimeline, loaded when the modal opens. */
+export async function projectTimelineAction(projectId: string): Promise<TimelineResult> {
+  await requireUser();
+  try {
+    return { entries: await projectTimeline(projectId) };
+  } catch (e) {
+    unstable_rethrow(e); // expired session → /login
+    console.error("[projects] timeline failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
