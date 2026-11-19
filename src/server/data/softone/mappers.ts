@@ -550,13 +550,15 @@ export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<R
 /**
  * Επόμενη ενέργεια → new SOACTION in the object/series of its kind (his mapping 2026-11-19):
  * CALL = SOCALL 1000, EMAIL = SOEMAIL 1003, MEETING = SOMEETING 2003.
- * TRDR, ACTPRSN = login prsn, FROMDATE "yyyy-mm-dd hh:mm" (Athens), COMMENTS. ACTSTATUS left to the series default.
- * ASSUMED (not yet confirmed by him): FROMDATE as the date field, no ACTSTATUS, no link to the source SOTASK.
+ * TRDR, ACTPRSN = login prsn, FROMDATE "yyyy-mm-dd hh:mm" (Athens), COMMENTS, SOACTIONS = soaction of the source
+ * Εκκρεμότητα (his field, 2026-11-19). ACTSTATUS left to the series default.
+ * ASSUMED (not yet confirmed by him): FROMDATE as the date field, no ACTSTATUS.
  */
 export const NEXT_ACTION_OBJECT: Record<NextActionKind, "SOCALL" | "SOEMAIL" | "SOMEETING"> = { CALL: "SOCALL", EMAIL: "SOEMAIL", MEETING: "SOMEETING" };
 export function nextActionToSetData(a: NewNextAction, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
-  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments }] };
+  if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
+  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
 }
 
 /** Row of api.crm.actions/getPendings: { soaction, series, actStatus, comments, finalDate?, trdr?, actPrsn? } */

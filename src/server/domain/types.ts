@@ -366,6 +366,8 @@ export const NEXT_ACTION_KINDS: readonly NextActionKind[] = ["CALL", "EMAIL", "M
 export interface NewNextAction {
   kind: NextActionKind;
   doctorId: string;
+  /** SOACTION of the Εκκρεμότητα this follows → SOACTION.SOACTIONS of the new action */
+  fromTaskId: string;
   /** Athens wall-clock "yyyy-mm-dd hh:mm" */
   at: string;
   comments: string;
