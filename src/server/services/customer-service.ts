@@ -1,6 +1,6 @@
 import { db } from "../data";
 import type { DoctorSearch } from "../data/provider";
-import type { Consent, ConsentChannels, Doctor, Equipment } from "../domain/types";
+import type { Consent, ConsentChannels, Doctor, Equipment, MachineListKind } from "../domain/types";
 import type { Session } from "../auth/jwt";
 
 export type DoctorInput = Omit<Doctor, "id" | "ownerUserId" | "createdAt" | "updatedAt" | "softoneTrdr">;
@@ -57,6 +57,11 @@ export function listHospitals(term?: string) {
 
 export function listEquipment(doctorId: string) {
   return db().equipment.listByDoctor(doctorId);
+}
+
+/** «+ Νέα …» in the equipment pickers – the SoftOne entry (new, or the existing one of the same name). */
+export function createMachineRef(kind: MachineListKind, name: string, markId?: string) {
+  return db().stats.createMachineRef(kind, name, markId);
 }
 
 /** Machine categories / marks / models (SoftOne api.crm/bootstrap). Never blocks the page: empty lists on failure. */

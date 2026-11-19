@@ -6,7 +6,7 @@
  */
 import { redirect } from "next/navigation";
 import { getSession } from "../../auth/session";
-import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
+import type { CheckIn, Doctor, MachineCatalog, MachineListKind, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
 import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, ACTION_OBJECT, nextActionToSetData, callLogToSetData, rowToTimelineEntry, rowToDocTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
@@ -410,6 +410,22 @@ export const softOneProvider: DataProvider = {
     async machineCatalog() {
       const m = (await bootstrap()).machine ?? {};
       return { categories: toRefs(m.categories), marks: toRefs(m.marks), models: toRefs(m.models) };
+    },
+    // api.crm/setMachineCategories | setMachineMarks | setMachineModels {name, markId?} (owner, 2026-11-19) →
+    // { success, id, code?, name, existing? } – an existing name (case-insensitive) is returned, not duplicated
+    async createMachineRef(kind, name, markId) {
+      const fn = { category: "setMachineCategories", mark: "setMachineMarks", model: "setMachineModels" }[kind];
+      const res = (await js<never>("api.crm", fn, { name, ...(kind === "model" && markId ? { markId: Number(markId) } : {}) })) as unknown as {
+        id?: number | string;
+        code?: string;
+        name?: string;
+        existing?: boolean;
+      };
+      if (res.id === undefined || res.id === null || res.id === "") throw new Error(`api.crm/${fn}: no id in the answer: ${JSON.stringify(res).slice(0, 200)}`);
+      bootstrapCache = null; // the new entry must show in every list right away
+      // no markId on the ref: setMachineModels doesn't store the company yet (it arrives via bootstrap once it does)
+      const ref = { id: String(res.id), code: String(res.code ?? res.id), name: res.name ?? name };
+      return { ref, existing: !!res.existing };
     },
     // selectable (isActive = selectable in SoftOne) project states / categories for the «Νέο Project» form
     async projectLookups() {

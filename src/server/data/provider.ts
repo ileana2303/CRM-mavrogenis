@@ -31,6 +31,8 @@ import type {
   NewCallLog,
   ActionKind,
   TimelineEntry,
+  MachineListKind,
+  MachineRef,
   User,
   Visit,
 } from "../domain/types";
@@ -151,6 +153,8 @@ export interface StatsRepo {
   listHospitals(term?: string): Promise<Hospital[]>;
   /** machine categories / marks / models for the equipment editor */
   machineCatalog(): Promise<MachineCatalog>;
+  /** «+ Νέα …» in the equipment pickers: adds to a catalog list (or returns the entry of the same name) */
+  createMachineRef(kind: MachineListKind, name: string, markId?: string): Promise<{ ref: MachineRef; existing: boolean }>;
   projectLookups(): Promise<ProjectLookups>;
   /** api.crm.products/list {q}: the first `limit` matches and how many there are in all */
   searchProducts(q: string, limit: number): Promise<{ total: number; items: ProductHit[] }>;

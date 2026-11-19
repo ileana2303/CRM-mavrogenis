@@ -114,6 +114,9 @@ export interface MachineRef {
   markId?: string;
 }
 
+/** which equipment list a «+ Νέα …» adds to → api.crm/setMachineCategories | setMachineMarks | setMachineModels */
+export type MachineListKind = "category" | "mark" | "model";
+
 export interface MachineCatalog {
   categories: MachineRef[];
   marks: MachineRef[];
