@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, BackLink, DoctorLine, Empty, Field, PageTitle } from "@/components/ui";
+import { Badge, BackLink, DoctorLine, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { ActionForm } from "@/components/action-form";
-import { fmtDate, todayIso } from "@/lib/format";
+import { NewTaskButton } from "@/components/new-task-button";
+import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
 import { NextActionButton } from "@/components/next-action-button";
@@ -25,7 +26,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   return (
     <div className="flex flex-col gap-4">
       <BackLink href={`/customers/${id}`} />
-      <PageTitle>{el.pending.title}</PageTitle>
+      <PageTitle right={<NewTaskButton action={addTaskAction} doctorId={id} />}>{el.pending.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
 
       <div className="grid grid-cols-3 gap-3">
@@ -98,17 +99,6 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
           </table>
         )}
       </div>
-
-      <ActionForm action={addTaskAction} className="card p-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] items-end">
-        <input type="hidden" name="doctorId" value={id} />
-        <Field label={el.pending.newTitle}>
-          <input name="title" className="input" required placeholder="Αποστολή προσφοράς OCT" />
-        </Field>
-        <Field label={el.pending.newDue}>
-          <input name="dueDate" type="date" className="input" required defaultValue={todayIso()} />
-        </Field>
-        <button className="btn-secondary">{el.pending.add}</button>
-      </ActionForm>
     </div>
   );
 }

@@ -358,6 +358,8 @@ export const el = {
     nextKindMissing: "Επιλέξτε τύπο ενέργειας.",
     nextWhenMissing: "Συμπληρώστε ημερομηνία και ώρα.",
     add: "+ Νέα εκκρεμότητα",
+    addTitle: "Νέα εκκρεμότητα",
+    addSave: "Αποθήκευση",
     newTitle: "Ενέργεια",
     newDue: "Προθεσμία",
     empty: "Δεν υπάρχουν εκκρεμότητες.",
