@@ -499,9 +499,12 @@ export function s1DateTimeToIso(v?: string | null): string | undefined {
 export function arrivalToSetData(trdr: string, prsn: string, arrivedAtIso: string, series: number): Record<string, Array<Record<string, unknown>>> {
   return { SOACTION: [{ SERIES: series, TRDR: Number(trdr), ACTPRSN: Number(prsn), FROMDATE: s1DateTime(arrivedAtIso) }] };
 }
-/** Αναχώρηση + visit report (2026-11-19, his choice (a)): FINALDATE and, when written, COMMENTS on the same SOMEETING 2001. */
+/**
+ * Αναχώρηση + visit report (2026-11-19, his choices): FINALDATE, ACTSTATUS 3 (the visit happened – before, every visit
+ * stayed «Προς έναρξη» in SoftOne) and, when written, COMMENTS – all on the same SOMEETING 2001.
+ */
 export function departureToSetData(departedAtIso: string, notes?: string): Record<string, Array<Record<string, unknown>>> {
-  return { SOACTION: [{ FINALDATE: s1DateTime(departedAtIso), ...(notes ? { COMMENTS: notes } : {}) }] };
+  return { SOACTION: [{ FINALDATE: s1DateTime(departedAtIso), ACTSTATUS: TASK_STATUS_DONE, ...(notes ? { COMMENTS: notes } : {}) }] };
 }
 
 /** Row of api.crm.actions/getPendingArrivals – column names tolerated in any case. */
