@@ -13,7 +13,8 @@ import { pendingForDoctor } from "@/server/services/task-service";
 import { listProjectSummaries } from "@/server/services/project-service";
 import { SOON } from "@/lib/features";
 import { TimelineButton } from "@/components/timeline-button";
-import { customerTimelineAction } from "../actions";
+import { customerTimelineAction, logCallAction } from "../actions";
+import { PhoneWithCallLog } from "@/components/call-log";
 
 export const metadata = { title: el.hub.title };
 
@@ -76,7 +77,7 @@ export default async function HubPage({ params, searchParams }: { params: Promis
         {el.hub.title}
       </PageTitle>
 
-      {saved && <Notice tone="green">{el.app.saved}</Notice>}
+      {saved && <Notice tone="green">{saved === "call" ? el.callLog.saved : el.app.saved}</Notice>}
 
       <section className="card p-4 grid gap-1 sm:grid-cols-2">
         <div className="sm:col-span-2 flex items-center justify-between gap-2">
@@ -88,7 +89,14 @@ export default async function HubPage({ params, searchParams }: { params: Promis
           </Link>
         </div>
         <Info label={el.customer.clinicAddress} value={[doctor.clinicAddress, doctor.postalCode, doctor.city].filter(Boolean).join(", ")} />
-        <Info label={el.customer.phone} value={doctor.mobile} href={doctor.mobile ? `tel:${doctor.mobile}` : undefined} />
+        {doctor.mobile ? (
+          <div className="text-sm">
+            <span className="text-[var(--muted)]">{el.customer.phone}: </span>
+            <PhoneWithCallLog doctorId={id} phone={doctor.mobile} action={logCallAction} />
+          </div>
+        ) : (
+          <Info label={el.customer.phone} value="" />
+        )}
         <Info label={el.customer.email} value={doctor.email} href={doctor.email ? `mailto:${doctor.email}` : undefined} />
         <Info label={el.customer.afm} value={doctor.afm} />
         <Info label={el.customer.activityType} value={doctor.activityType ? el.enums.activityType[doctor.activityType] : ""} />

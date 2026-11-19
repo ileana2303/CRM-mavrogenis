@@ -8,7 +8,7 @@ import type { ActivityType, DoctorRank } from "@/server/domain/types";
 import { createDoctor, customerTimeline, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
-import { addTask, closeWithNextAction, completeTask, reopenTask, taskTimeline } from "@/server/services/task-service";
+import { addTask, closeWithNextAction, completeTask, logCall, reopenTask, taskTimeline } from "@/server/services/task-service";
 import { NEXT_ACTION_KINDS, type ActionKind, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
@@ -207,6 +207,32 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   revalidatePath("/my-day");
   revalidatePath("/");
   redirect(backTo(fd, doctorId));
+}
+
+/** «Καταγραφή κλήσης» on the customer hub: the call just made (done SOCALL) + optional linked follow-up. */
+export async function logCallAction(fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const at = str(fd, "at");
+  const comments = str(fd, "comments");
+  if (!/^\d+$/.test(doctorId)) return { error: "Λείπει ο πελάτης." };
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(at)) return { error: el.pending.nextWhenMissing };
+  if (!comments) return { error: el.callLog.commentsMissing };
+  const nextKind = str(fd, "nextKind");
+  let next: { kind: NextActionKind; at: string; comments: string } | undefined;
+  if (nextKind) {
+    if (!NEXT_ACTION_KINDS.includes(nextKind as NextActionKind)) return { error: el.pending.nextKindMissing };
+    const date = str(fd, "nextDate");
+    const time = str(fd, "nextTime");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
+    next = { kind: nextKind as NextActionKind, at: `${date} ${time}`, comments: str(fd, "nextComments") || comments };
+  }
+  const failed = await attempt("log call", () => logCall(doctorId, at, comments, next));
+  if (failed) return failed;
+  revalidatePath(`/customers/${doctorId}`);
+  revalidatePath(`/customers/${doctorId}/pending`);
+  revalidatePath("/dashboard");
+  redirect(`/customers/${doctorId}?saved=call`);
 }
 
 /** «Ιστορικό» on a pending row: the chain from api.crm.actions/getTimeline, loaded when the modal opens. */
