@@ -12,6 +12,23 @@ function I({ size = 22, children, ...rest }: P & { children: React.ReactNode }) 
 }
 
 export const Icon = {
+  phone: (p: P) => (
+    <I {...p}>
+      <path d="M5 3.5h3.2l1.6 4.2-2.2 1.4a11 11 0 0 0 7.3 7.3l1.4-2.2 4.2 1.6V19a1.8 1.8 0 0 1-2 1.8A16.5 16.5 0 0 1 3.2 5.5 1.8 1.8 0 0 1 5 3.5z" />
+    </I>
+  ),
+  history: (p: P) => (
+    <I {...p}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6L3.5 8.5" />
+      <path d="M3.5 4v4.5H8M12 7.5V12l3 2" />
+    </I>
+  ),
+  mail: (p: P) => (
+    <I {...p}>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </I>
+  ),
   calendar: (p: P) => (
     <I {...p}>
       <rect x="3" y="4.5" width="18" height="16" rx="3" />

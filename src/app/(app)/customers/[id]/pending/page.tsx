@@ -73,7 +73,9 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
               {shown.map((t) => (
                 <tr key={t.id}>
                   <td>
-                    <div className="font-medium">{t.title}</div>
+                    <TaskTimelineButton taskId={t.id} load={taskTimelineAction}>
+                      {t.title}
+                    </TaskTimelineButton>
                     {t.projectId && (
                       <Link href={`/customers/${id}/projects/${t.projectId}`} className="text-xs text-brand-700 hover:underline">
                         {el.pending.project}: {t.projectName ?? projectById.get(t.projectId)?.title ?? `#${t.projectId}`}
@@ -86,7 +88,6 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                   </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-1">
-                      <TaskTimelineButton taskId={t.id} load={taskTimelineAction} />
                       <ActionForm action={toggleTaskAction}>
                         <input type="hidden" name="id" value={t.id} />
                         <input type="hidden" name="doctorId" value={id} />

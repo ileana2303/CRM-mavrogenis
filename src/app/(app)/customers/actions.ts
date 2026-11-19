@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
@@ -195,6 +195,7 @@ export async function taskTimelineAction(taskId: string): Promise<{ entries: Tim
   try {
     return { entries: await taskTimeline(taskId) };
   } catch (e) {
+    unstable_rethrow(e); // expired session → /login
     console.error("[customers] task timeline failed", e);
     return { error: e instanceof Error ? e.message : String(e) };
   }

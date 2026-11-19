@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { Badge, BackLink, Card, DoctorLine, Empty, Field, Notice, PageTitle } from "@/components/ui";
 import { Select } from "@/components/select";
 import { ActionForm } from "@/components/action-form";
@@ -7,7 +7,8 @@ import { setProjectStateAction } from "../actions";
 import { el } from "@/lib/i18n/el";
 import { fmtDate, fmtEur } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
-import { getProjectDetail, projectLookups } from "@/server/services/project-service";
+import { getProjectDetail, projectLookups, projectTimeline } from "@/server/services/project-service";
+import { Timeline } from "@/components/timeline";
 import { SOON } from "@/lib/features";
 import { ComingSoon } from "@/components/coming-soon";
 
@@ -27,7 +28,19 @@ export default async function ProjectViewPage({
   const { id, pid } = await params;
   const { saved, stage } = await searchParams;
   if (SOON.projectDetail) return <ComingSoon title={metadata.title} backHref={`/customers/${id}/projects`} />;
-  const [doctor, project, lookups] = await Promise.all([getDoctor(id), getProjectDetail(pid), projectLookups()]);
+  const [doctor, project, lookups, timeline] = await Promise.all([
+    getDoctor(id),
+    getProjectDetail(pid),
+    projectLookups(),
+    // a failing timeline must not take the project screen down: its card shows SoftOne's error instead
+    projectTimeline(pid).then(
+      (entries) => ({ entries }),
+      (e: unknown) => {
+        unstable_rethrow(e); // an expired session's redirect to /login must still happen
+        return { error: e instanceof Error ? e.message : String(e) };
+      },
+    ),
+  ]);
   if (!doctor || !project || project.doctorId !== id) notFound();
   const latest = project.offers.find((o) => !o.cancelled);
 
@@ -143,6 +156,18 @@ export default async function ProjectViewPage({
               ))}
             </tbody>
           </table>
+        )}
+      </Card>
+
+      <Card title={el.timeline.title}>
+        {"error" in timeline ? (
+          <Notice tone="amber">
+            {el.timeline.error}: {timeline.error}
+          </Notice>
+        ) : timeline.entries.length === 0 ? (
+          <Empty>{el.timeline.empty}</Empty>
+        ) : (
+          <Timeline entries={timeline.entries} />
         )}
       </Card>
     </div>
