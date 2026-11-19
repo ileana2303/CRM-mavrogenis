@@ -6,9 +6,19 @@ import { athensDate } from "@/lib/athens";
 import { ActionForm, type ActionResult } from "./action-form";
 import { Modal } from "./modal";
 import { Field } from "./ui";
+import { Select, type SelectOption } from "./select";
 
-/** «+ Νέα εκκρεμότητα» at the top right of the pending page: title + due date in a modal → SOTASK. */
-export function NewTaskButton({ action, doctorId }: { action: (fd: FormData) => Promise<ActionResult>; doctorId: string }) {
+/** «+ Νέα εκκρεμότητα» at the top right of the pending page: title, due date, optional project in a modal → SOTASK. */
+export function NewTaskButton({
+  action,
+  doctorId,
+  projects,
+}: {
+  action: (fd: FormData) => Promise<ActionResult>;
+  doctorId: string;
+  /** the customer's projects (api.crm.customers/projects) */
+  projects: SelectOption[];
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,6 +35,11 @@ export function NewTaskButton({ action, doctorId }: { action: (fd: FormData) => 
           <Field label={el.pending.newDue} required>
             <input name="dueDate" type="date" className="input" required defaultValue={athensDate()} />
           </Field>
+          {projects.length > 0 && (
+            <Field label={el.pending.project}>
+              <Select name="projectId" defaultValue="" options={[{ value: "", label: el.pending.noProject }, ...projects]} />
+            </Field>
+          )}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
               Άκυρο

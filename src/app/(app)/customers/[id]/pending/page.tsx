@@ -7,6 +7,7 @@ import { NewTaskButton } from "@/components/new-task-button";
 import { fmtDate } from "@/lib/format";
 import { doctorFullName, getDoctor } from "@/server/services/customer-service";
 import { pendingForDoctor } from "@/server/services/task-service";
+import { listProjectSummaries } from "@/server/services/project-service";
 import { NextActionButton } from "@/components/next-action-button";
 import { addTaskAction, nextActionAction, toggleTaskAction } from "../../actions";
 
@@ -20,13 +21,16 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const filter = (["open", "overdue", "done", "all"].includes(sp.filter ?? "") ? sp.filter : "open") as Filter;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
-  const { tasks, counts } = await pendingForDoctor(id);
+  const [{ tasks, counts }, projects] = await Promise.all([pendingForDoctor(id), listProjectSummaries(id)]);
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  // only selectable (isActive) projects are offered for new tasks; existing links show whatever SoftOne has
+  const projectOptions = projects.filter((p) => p.active).map((p) => ({ value: p.id, label: p.title, hint: p.code }));
   const shown = tasks.filter((t) => (filter === "all" ? true : filter === "open" ? t.status === "OPEN" : filter === "overdue" ? t.view === "OVERDUE" : t.view === "DONE"));
 
   return (
     <div className="flex flex-col gap-4">
       <BackLink href={`/customers/${id}`} />
-      <PageTitle right={<NewTaskButton action={addTaskAction} doctorId={id} />}>{el.pending.title}</PageTitle>
+      <PageTitle right={<NewTaskButton action={addTaskAction} doctorId={id} projects={projectOptions} />}>{el.pending.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
 
       <div className="grid grid-cols-3 gap-3">
@@ -68,13 +72,12 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
             <tbody>
               {shown.map((t) => (
                 <tr key={t.id}>
-                  <td className="font-medium">
-                    {t.projectId ? (
-                      <Link href={`/customers/${id}/projects/${t.projectId}`} className="hover:underline">
-                        {t.title}
+                  <td>
+                    <div className="font-medium">{t.title}</div>
+                    {t.projectId && (
+                      <Link href={`/customers/${id}/projects/${t.projectId}`} className="text-xs text-brand-700 hover:underline">
+                        {el.pending.project}: {projectById.get(t.projectId)?.title ?? `#${t.projectId}`}
                       </Link>
-                    ) : (
-                      t.title
                     )}
                   </td>
                   <td className="tabular-nums whitespace-nowrap">{fmtDate(t.dueDate)}</td>
@@ -90,7 +93,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                         <input type="hidden" name="op" value={t.status === "DONE" ? "reopen" : "done"} />
                         <button className="btn-ghost min-h-9 text-sm whitespace-nowrap">{t.status === "DONE" ? el.pending.reopen : `✓ ${el.pending.complete}`}</button>
                       </ActionForm>
-                      {t.status !== "DONE" && <NextActionButton action={nextActionAction} taskId={t.id} doctorId={id} filter={filter} title={t.title} />}
+                      {t.status !== "DONE" && <NextActionButton action={nextActionAction} taskId={t.id} doctorId={id} filter={filter} title={t.title} projectId={t.projectId} />}
                     </div>
                   </td>
                 </tr>

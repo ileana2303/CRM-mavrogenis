@@ -30,12 +30,15 @@ export function NextActionButton({
   doctorId,
   filter,
   title,
+  projectId,
 }: {
   action: (fd: FormData) => Promise<ActionResult>;
   taskId: string;
   doctorId: string;
   filter: string;
   title: string;
+  /** PRJC of the Εκκρεμότητα – the new action carries it */
+  projectId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<NextActionKind>("CALL");
@@ -51,6 +54,7 @@ export function NextActionButton({
           <input type="hidden" name="doctorId" value={doctorId} />
           <input type="hidden" name="filter" value={filter} />
           <input type="hidden" name="kind" value={kind} />
+          {projectId && <input type="hidden" name="projectId" value={projectId} />}
           <p className="text-sm text-[var(--muted)] line-clamp-2">{title}</p>
 
           <div>

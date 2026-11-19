@@ -360,6 +360,8 @@ export const el = {
     add: "+ Νέα εκκρεμότητα",
     addTitle: "Νέα εκκρεμότητα",
     addSave: "Αποθήκευση",
+    project: "Project",
+    noProject: "Χωρίς project",
     newTitle: "Ενέργεια",
     newDue: "Προθεσμία",
     empty: "Δεν υπάρχουν εκκρεμότητες.",
