@@ -352,6 +352,9 @@ export interface Task {
   id: string;
   doctorId: string;
   projectId?: string;
+  /** PRJC name/code as getPendings returns them (prjc_prjc_name / prjc_prjc_code) */
+  projectName?: string;
+  projectCode?: string;
   userId: string;
   title: string;
   dueDate: string;

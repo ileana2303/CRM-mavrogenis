@@ -75,7 +75,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                     <div className="font-medium">{t.title}</div>
                     {t.projectId && (
                       <Link href={`/customers/${id}/projects/${t.projectId}`} className="text-xs text-brand-700 hover:underline">
-                        {el.pending.project}: {projectById.get(t.projectId)?.title ?? `#${t.projectId}`}
+                        {el.pending.project}: {t.projectName ?? projectById.get(t.projectId)?.title ?? `#${t.projectId}`}
                       </Link>
                     )}
                   </td>

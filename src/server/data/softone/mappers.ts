@@ -567,7 +567,8 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
   return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
 }
 
-/** Row of api.crm.actions/getPendings: { soaction, series, actStatus, comments, finalDate?, trdr?, actPrsn? } */
+/** Row of api.crm.actions/getPendings: { soaction, series, trdr, trdr_customer_code/name, prjc?, prjc_prjc_code?,
+ *  prjc_prjc_name?, actStatus, comments, dueDate } (checked 2026-11-19) */
 export type S1PendingRow = Record<string, unknown>;
 export function rowToTask(r: S1PendingRow, fallbackDoctorId: string, fallbackUserId: string): Task | null {
   const st = Number(pickCol(r, "actstatus") ?? TASK_STATUS_OPEN);
@@ -577,6 +578,8 @@ export function rowToTask(r: S1PendingRow, fallbackDoctorId: string, fallbackUse
     id: pickCol(r, "soaction", "id") ?? "",
     doctorId: pickCol(r, "trdr") ?? fallbackDoctorId,
     projectId: pickCol(r, "prjc"),
+    projectName: pickCol(r, "prjc_prjc_name"),
+    projectCode: pickCol(r, "prjc_prjc_code"),
     userId: pickCol(r, "actprsn", "prsn") ?? fallbackUserId,
     title: pickCol(r, "comments", "title") ?? "",
     dueDate: due.slice(0, 10),
