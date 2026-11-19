@@ -390,7 +390,7 @@ export const softOneProvider: DataProvider = {
     },
     async update(id, patch) {
       const cid = await clientId();
-      if (patch.departedAt) await s1.setData(cid, "SOMEETING", departureToSetData(patch.departedAt), Number(id));
+      if (patch.departedAt) await s1.setData(cid, "SOMEETING", departureToSetData(patch.departedAt, patch.notes), Number(id));
       return { id, doctorId: "", userId: "", arrivedAt: "", ...patch } as CheckIn;
     },
     // manager log: needs a list endpoint (api.crm.actions/list with series 2001) – not built yet

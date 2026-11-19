@@ -434,6 +434,8 @@ export interface CheckIn {
   departLng?: number;
   /** SoftOne SOACTION id (SOMEETING series 2001) when the arrival was sent to SoftOne */
   s1Id?: string;
+  /** «Τι έγινε στην επίσκεψη» – written with the departure into the same SOMEETING's COMMENTS (his choice, 2026-11-19) */
+  notes?: string;
 }
 
 export interface Product {
