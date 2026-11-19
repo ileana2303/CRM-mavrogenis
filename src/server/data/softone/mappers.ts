@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, ActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -619,22 +619,50 @@ export function rowToDocTimelineEntry(r: S1TimelineRow, amountBasis: "NET" | "TO
   };
 }
 
-/** Row of api.crm.actions/getPendings: { soaction, series, trdr, trdr_customer_code/name, prjc?, prjc_prjc_code?,
- *  prjc_prjc_name?, actStatus, comments, dueDate } (checked 2026-11-19) */
+/**
+ * Row of api.crm.actions/getPendings (checked 2026-11-19):
+ *   { soaction, soredir, series, trdr?, trdr_customer_code, trdr_customer_name, prjc?, prjc_prjc_code?, prjc_prjc_name?,
+ *     actStatus, comments?, dueDate? (tasks), fromDate, actPrsn?, actPrsn_prsnin_name, actPrsn_prsnin_name2 }
+ * Tasks, calls, emails and meetings of every series – including old ones (1001, 1002, 1004–1006, 2000) and the
+ * Άφιξη/Αναχώρηση SOMEETINGs, which are records, not to-dos, and are dropped here (`arrivalSeries`).
+ */
 export type S1PendingRow = Record<string, unknown>;
-export function rowToTask(r: S1PendingRow, fallbackDoctorId: string, fallbackUserId: string): Task | null {
+/** soredir seen: 1 call, 2 meeting, 3 task. Email is recognised by its series (SOEMAIL 1003) – its soredir not seen yet. */
+const ACTION_KIND_BY_SOREDIR: Record<string, ActionKind> = { "1": "CALL", "2": "MEETING", "3": "TASK" };
+export const ACTION_OBJECT: Record<ActionKind, "SOTASK" | "SOCALL" | "SOEMAIL" | "SOMEETING"> = { TASK: "SOTASK", ...NEXT_ACTION_OBJECT };
+export function rowToTask(
+  r: S1PendingRow,
+  fallbackDoctorId: string,
+  fallbackUserId: string,
+  series: { arrival: number; email: number },
+): Task | null {
   const st = Number(pickCol(r, "actstatus") ?? TASK_STATUS_OPEN);
   if (st === TASK_STATUS_CANCELLED) return null;
-  const due = pickCol(r, "duedate", "finaldate") ?? pickCol(r, "trndate") ?? "";
+  const ser = pickCol(r, "series");
+  if (ser !== undefined && Number(ser) === series.arrival) return null;
+  const id = pickCol(r, "soaction", "id") ?? "";
+  const soredir = pickCol(r, "soredir");
+  // rows from before 2026-11-19 had no soredir: those were the SOTASK Εκκρεμότητες
+  const kind: ActionKind | undefined = ser !== undefined && Number(ser) === series.email ? "EMAIL" : soredir === undefined ? "TASK" : ACTION_KIND_BY_SOREDIR[soredir];
+  if (!kind) throw new Error(`getPendings: action ${id} has soredir ${soredir} (series ${ser}) – unknown object; add it to ACTION_KIND_BY_SOREDIR`);
+  const from = pickCol(r, "fromdate");
+  const due = kind === "TASK" ? (pickCol(r, "duedate") ?? from ?? "") : (from ?? pickCol(r, "duedate") ?? "");
+  const owner = [pickCol(r, "actPrsn_prsnin_name"), pickCol(r, "actPrsn_prsnin_name2")].filter(Boolean).join(" ");
   return {
-    id: pickCol(r, "soaction", "id") ?? "",
+    id,
     doctorId: pickCol(r, "trdr") ?? fallbackDoctorId,
+    doctorName: pickCol(r, "trdr_customer_name"),
+    doctorCode: pickCol(r, "trdr_customer_code"),
     projectId: pickCol(r, "prjc"),
     projectName: pickCol(r, "prjc_prjc_name"),
     projectCode: pickCol(r, "prjc_prjc_code"),
     userId: pickCol(r, "actprsn", "prsn") ?? fallbackUserId,
+    ownerName: owner || undefined,
     title: pickCol(r, "comments", "title") ?? "",
     dueDate: due.slice(0, 10),
+    time: kind !== "TASK" && from ? from.slice(11, 16) : undefined,
+    kind,
+    series: ser,
     status: st === TASK_STATUS_DONE ? "DONE" : "OPEN",
     source: "MANUAL",
   };

@@ -28,6 +28,7 @@ import type {
   Target,
   Task,
   NewNextAction,
+  ActionKind,
   TimelineEntry,
   User,
   Visit,
@@ -123,9 +124,11 @@ export interface TasksRepo {
   listByDoctor(doctorId: string): Promise<Task[]>;
   /** api.crm.actions/getPendings {trdr}: the tasks (`data`) and the customer's projects (top-level `projects`) in one call */
   pendingsByDoctor(doctorId: string): Promise<{ tasks: Task[]; projects: ProjectSummary[] }>;
-  listByUser(userId: string): Promise<Task[]>;
+  /** the logged-in salesperson's open items across customers, dated up to `toDate` ("yyyy-mm-dd") when given */
+  listByUser(userId: string, toDate?: string): Promise<Task[]>;
   create(t: NewEntity<Task>): Promise<Task>;
-  update(id: string, patch: Partial<Task>): Promise<Task>;
+  /** header delta on the item's own object – SOTASK unless `kind` says otherwise */
+  update(id: string, patch: Partial<Task>, kind?: ActionKind): Promise<Task>;
   /** «Επόμενη ενέργεια»: new SOCALL / SOEMAIL / SOMEETING for the customer → its SOACTION id */
   createNextAction(a: NewNextAction): Promise<{ id: string }>;
   /** api.crm.actions/getTimeline {soaction}: the chain of actions linked to it, newest first */

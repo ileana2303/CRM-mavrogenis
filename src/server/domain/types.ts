@@ -355,6 +355,16 @@ export interface Task {
   /** PRJC name/code as getPendings returns them (prjc_prjc_name / prjc_prjc_code) */
   projectName?: string;
   projectCode?: string;
+  /** which SoftOne action it is – getPendings returns tasks, calls, emails and meetings (2026-11-19). Absent = TASK. */
+  kind?: ActionKind;
+  series?: string;
+  /** "hh:mm" (Athens) for scheduled calls/emails/meetings (FROMDATE); tasks have only a due date */
+  time?: string;
+  /** whose item it is (ACTPRSN) – a customer's list shows every salesperson's items */
+  ownerName?: string;
+  /** customer name/code from the row – the cross-customer «Η μέρα μου» list shows them */
+  doctorName?: string;
+  doctorCode?: string;
   userId: string;
   title: string;
   dueDate: string;
@@ -389,6 +399,8 @@ export interface TimelineEntry {
 
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */
 export type NextActionKind = "CALL" | "EMAIL" | "MEETING";
+/** An action in SoftOne: SOTASK / SOCALL / SOEMAIL / SOMEETING */
+export type ActionKind = "TASK" | NextActionKind;
 export const NEXT_ACTION_KINDS: readonly NextActionKind[] = ["CALL", "EMAIL", "MEETING"];
 export interface NewNextAction {
   kind: NextActionKind;

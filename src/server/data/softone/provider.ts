@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, rowToTimelineEntry, rowToDocTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, ACTION_OBJECT, nextActionToSetData, rowToTimelineEntry, rowToDocTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -31,6 +31,9 @@ const nextActionSeries = {
 };
 /** statuses shown in the CRM: everything except 4 Ακυρώθηκε */
 const TASK_STATUSES = "0,1,2,3,5,6";
+/** not done, not cancelled */
+const OPEN_STATUSES = "0,1,2,5,6";
+const pendingSeries = () => ({ arrival: arrivalSeries(), email: nextActionSeries.EMAIL() });
 
 async function clientId(): Promise<string> {
   const s = await getSession();
@@ -313,31 +316,31 @@ export const softOneProvider: DataProvider = {
     create: todo("offers.create"),
     update: todo("offers.update"),
   },
-  // Εκκρεμότητες = SOTASK series 3000 (decided 2026-11-10); reads via api.crm.actions/getPendings
+  // Εκκρεμότητες + calls/emails/meetings – api.crm.actions/getPendings (extended by him 2026-11-19)
   tasks: {
     async listByDoctor(doctorId): Promise<Task[]> {
       return (await this.pendingsByDoctor(doctorId)).tasks;
     },
-    // with trdr, getPendings also returns the customer's projects as a top-level `projects` array (same rows as
-    // api.crm.customers/projects) – the picker for a new Εκκρεμότητα. Rows carry no per-task prjc yet (checked 2026-11-19).
+    // with trdr and no prsn: every salesperson's items for the customer (his decision 2026-11-19), plus the customer's
+    // projects as a top-level `projects` array – the picker for a new Εκκρεμότητα.
     async pendingsByDoctor(doctorId) {
       const prsn = await sessionPrsn();
       const [res, boot] = await Promise.all([
-        js<S1PendingRow[]>("api.crm.actions", "getPendings", { trdr: Number(doctorId), prsn: Number(prsn), actStatus: TASK_STATUSES }),
+        js<S1PendingRow[]>("api.crm.actions", "getPendings", { trdr: Number(doctorId), actStatus: TASK_STATUSES }),
         bootstrap(),
       ]);
       const lookups = { states: nameById(boot.prjc?.prjState), categories: nameById(boot.prjc?.prjCategory) };
       const projectRows = (res as { projects?: S1ProjectRow[] }).projects ?? [];
       return {
-        tasks: (res.data ?? []).map((r) => rowToTask(r, doctorId, prsn)).filter((t): t is Task => !!t),
+        tasks: (res.data ?? []).map((r) => rowToTask(r, doctorId, prsn, pendingSeries())).filter((t): t is Task => !!t),
         projects: projectRows.map((r) => rowToProjectSummary(r, lookups)),
       };
     },
-    async listByUser(userId): Promise<Task[]> {
-      // needs getPendings without trdr (owner to make it optional)
+    // without trdr: the logged-in salesperson's open items across customers, dated up to `toDate` («Η μέρα μου»)
+    async listByUser(userId, toDate): Promise<Task[]> {
       const prsn = await sessionPrsn();
-      const res = await js<S1PendingRow[]>("api.crm.actions", "getPendings", { prsn: Number(prsn), actStatus: TASK_STATUSES });
-      return (res.data ?? []).map((r) => rowToTask(r, "", userId)).filter((t): t is Task => !!t);
+      const res = await js<S1PendingRow[]>("api.crm.actions", "getPendings", { prsn: Number(prsn), actStatus: OPEN_STATUSES, ...(toDate ? { toDate } : {}) });
+      return (res.data ?? []).map((r) => rowToTask(r, "", userId, pendingSeries())).filter((t): t is Task => !!t);
     },
     async create(t) {
       const cid = await clientId();
@@ -345,9 +348,10 @@ export const softOneProvider: DataProvider = {
       const res = await s1.setData(cid, "SOTASK", taskToSetData(t, prsn, taskSeries()));
       return { ...t, id: String(res.id) };
     },
-    async update(id, patch) {
+    // header delta on the item's own object (ACTSTATUS 3 on a SOCALL goes through SOCALL)
+    async update(id, patch, kind = "TASK") {
       const cid = await clientId();
-      await s1.setData(cid, "SOTASK", taskPatchToSetData(patch), Number(id));
+      await s1.setData(cid, ACTION_OBJECT[kind], taskPatchToSetData(patch), Number(id));
       return { id, doctorId: "", userId: "", title: "", dueDate: "", status: "OPEN", source: "MANUAL", ...patch } as Task;
     },
     // Επόμενη ενέργεια = SOCALL 1000 / SOEMAIL 1003 / SOMEETING 2003 (his mapping 2026-11-19)
