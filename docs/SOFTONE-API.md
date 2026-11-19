@@ -173,6 +173,13 @@ Sent with the object's default form (no `form`).
 **Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default.
 Not verified against SoftOne yet.
 
+### 8b. Ιστορικό ✔ — `api.crm.actions/getTimeline` (2026-11-19)
+
+`{ soaction }` → `data: [{ soaction, trnDate, fromDate, code, comments, actStatus, series, objectType }]`, newest first:
+the chain of actions linked to that soaction through `SOACTIONS` (checked on 9183 → itself + SOMEETING 9185).
+Shown by the «Ιστορικό» button on every pending row (modal, loaded on open). A row without soaction/objectType/date
+is an error, not skipped.
+
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
 | step | call |
