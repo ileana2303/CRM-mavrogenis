@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
-import type { NextActionKind } from "@/server/domain/types";
 import { ActionForm, type ActionResult } from "./action-form";
 import { DictationTextarea } from "./dictation-textarea";
 import { Icon } from "./icons";
 import { Modal } from "./modal";
 import { Field } from "./ui";
+import { NextActionFields } from "./next-action-fields";
 
 /** a tap on the number is remembered for this long – long enough for a real call, short enough not to nag tomorrow */
 const WINDOW_MS = 3 * 60 * 60 * 1000;
@@ -20,10 +20,6 @@ function athensStamp(t: number): string {
   const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(t));
   return `${athensDate(t)} ${p.replace(/^24/, "00")}`;
 }
-const nextHour = () => {
-  const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", hour: "2-digit", hour12: false }).format(new Date())) % 24;
-  return h >= 23 ? "23:30" : `${String(h + 1).padStart(2, "0")}:00`;
-};
 
 function readTap(doctorId: string): number | null {
   try {
@@ -50,7 +46,6 @@ export function PhoneWithCallLog({ doctorId, phone, action }: { doctorId: string
   const [tapAt, setTapAt] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [callAt, setCallAt] = useState<number>(0);
-  const [nextKind, setNextKind] = useState<NextActionKind | "">("");
 
   // banner after coming back from the phone app (or a reload within the window)
   useEffect(() => {
@@ -69,7 +64,6 @@ export function PhoneWithCallLog({ doctorId, phone, action }: { doctorId: string
   };
   const openForm = (at: number) => {
     setCallAt(at);
-    setNextKind("");
     setOpen(true);
   };
   const dismiss = () => {
@@ -117,53 +111,13 @@ export function PhoneWithCallLog({ doctorId, phone, action }: { doctorId: string
       <Modal open={open} onClose={() => setOpen(false)} title={el.callLog.title} footer={el.callLog.note} width="36rem">
         <ActionForm action={action} className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-2 text-left">
           <input type="hidden" name="doctorId" value={doctorId} />
-          <input type="hidden" name="nextKind" value={nextKind} />
           <CallTime defaultAt={callAt} />
 
           <Field label={el.callLog.comments} required>
             <DictationTextarea name="comments" rows={4} placeholder={el.callLog.commentsPlaceholder} />
           </Field>
 
-          <div>
-            <span className="label">{el.callLog.next}</span>
-            <div role="radiogroup" aria-label={el.callLog.next} className="grid grid-cols-4 gap-2">
-              {(
-                [
-                  ["", el.callLog.nextNone],
-                  ["CALL", el.pending.nextCall],
-                  ["EMAIL", el.pending.nextEmail],
-                  ["MEETING", el.pending.nextMeeting],
-                ] as const
-              ).map(([k, label]) => (
-                <button
-                  key={k || "none"}
-                  type="button"
-                  role="radio"
-                  aria-checked={nextKind === k}
-                  onClick={() => setNextKind(k)}
-                  className={`chip min-h-11 justify-center ${nextKind === k ? "bg-brand-600 text-white border-brand-600" : ""}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {nextKind && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={el.pending.nextDate} required>
-                  <input name="nextDate" type="date" className="input" required defaultValue={athensDate()} />
-                </Field>
-                <Field label={el.pending.nextTime} required>
-                  <input name="nextTime" type="time" className="input" required defaultValue={nextHour()} />
-                </Field>
-              </div>
-              <Field label={el.callLog.nextComments}>
-                <textarea name="nextComments" className="input min-h-20" />
-              </Field>
-            </>
-          )}
+          <NextActionFields commentsLabel={el.callLog.nextComments} />
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-ghost">

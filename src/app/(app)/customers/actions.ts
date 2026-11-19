@@ -7,7 +7,7 @@ import { requireUser } from "@/server/auth/current-user";
 import type { ActivityType, DoctorRank } from "@/server/domain/types";
 import { createDoctor, customerTimeline, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
-import { arrive, depart } from "@/server/services/checkin-service";
+import { arrive, depart, departWithReport } from "@/server/services/checkin-service";
 import { addTask, closeWithNextAction, completeTask, logCall, reopenTask, taskTimeline } from "@/server/services/task-service";
 import { NEXT_ACTION_KINDS, type ActionKind, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
@@ -209,6 +209,33 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   redirect(backTo(fd, doctorId));
 }
 
+/** The optional «Επόμενη ενέργεια» of NextActionFields; comments default to the parent's notes. */
+function readNextAction(fd: FormData, fallbackComments: string): { kind: NextActionKind; at: string; comments: string } | { error: string } | undefined {
+  const kind = str(fd, "nextKind");
+  if (!kind) return undefined;
+  if (!NEXT_ACTION_KINDS.includes(kind as NextActionKind)) return { error: el.pending.nextKindMissing };
+  const date = str(fd, "nextDate");
+  const time = str(fd, "nextTime");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
+  return { kind: kind as NextActionKind, at: `${date} ${time}`, comments: str(fd, "nextComments") || fallbackComments };
+}
+
+/** Αναχώρηση with the visit report: notes on the arrival's SOMEETING 2001 + optional linked next action. */
+export async function departWithReportAction(fd: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const doctorId = str(fd, "doctorId");
+  const notes = str(fd, "notes");
+  const next = readNextAction(fd, notes);
+  if (next && "error" in next) return next;
+  const num = (k: string) => (str(fd, k) ? Number(str(fd, k)) : undefined);
+  const failed = await attempt("depart", () => departWithReport(doctorId, user, { lat: num("lat"), lng: num("lng") }, notes, next));
+  if (failed) return failed;
+  revalidatePath(`/customers/${doctorId}`);
+  revalidatePath(`/customers/${doctorId}/pending`);
+  revalidatePath("/dashboard");
+  redirect(`/customers/${doctorId}?saved=visit`);
+}
+
 /** «Καταγραφή κλήσης» on the customer hub: the call just made (done SOCALL) + optional linked follow-up. */
 export async function logCallAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
@@ -218,15 +245,8 @@ export async function logCallAction(fd: FormData): Promise<ActionResult> {
   if (!/^\d+$/.test(doctorId)) return { error: "Λείπει ο πελάτης." };
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(at)) return { error: el.pending.nextWhenMissing };
   if (!comments) return { error: el.callLog.commentsMissing };
-  const nextKind = str(fd, "nextKind");
-  let next: { kind: NextActionKind; at: string; comments: string } | undefined;
-  if (nextKind) {
-    if (!NEXT_ACTION_KINDS.includes(nextKind as NextActionKind)) return { error: el.pending.nextKindMissing };
-    const date = str(fd, "nextDate");
-    const time = str(fd, "nextTime");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
-    next = { kind: nextKind as NextActionKind, at: `${date} ${time}`, comments: str(fd, "nextComments") || comments };
-  }
+  const next = readNextAction(fd, comments);
+  if (next && "error" in next) return next;
   const failed = await attempt("log call", () => logCall(doctorId, at, comments, next));
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}`);

@@ -77,7 +77,7 @@ export default async function HubPage({ params, searchParams }: { params: Promis
         {el.hub.title}
       </PageTitle>
 
-      {saved && <Notice tone="green">{saved === "call" ? el.callLog.saved : el.app.saved}</Notice>}
+      {saved && <Notice tone="green">{saved === "call" ? el.callLog.saved : saved === "visit" ? el.visitReport.saved : el.app.saved}</Notice>}
 
       <section className="card p-4 grid gap-1 sm:grid-cols-2">
         <div className="sm:col-span-2 flex items-center justify-between gap-2">

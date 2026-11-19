@@ -3,7 +3,12 @@
 import { useState, useTransition } from "react";
 import { el } from "@/lib/i18n/el";
 import { fmtTime } from "@/lib/format";
-import { checkInAction } from "@/app/(app)/customers/actions";
+import { checkInAction, departWithReportAction } from "@/app/(app)/customers/actions";
+import { ActionForm } from "./action-form";
+import { DictationTextarea } from "./dictation-textarea";
+import { Modal } from "./modal";
+import { NextActionFields } from "./next-action-fields";
+import { Field } from "./ui";
 
 function getGeo(): Promise<{ lat?: number; lng?: number }> {
   return new Promise((resolve) => {
@@ -18,19 +23,25 @@ function getGeo(): Promise<{ lat?: number; lng?: number }> {
 }
 
 /**
- * Άφιξη / Αναχώρηση (slide 24). Timestamps + geolocation are stored in the background;
- * the salesperson only sees the times of the current visit. Managers see the log at /manager/check-ins.
+ * Άφιξη / Αναχώρηση (slide 24). Άφιξη is one tap. Αναχώρηση opens the visit report: what happened (dictation) and an
+ * optional next action – saved on the same SOMEETING 2001 (FINALDATE + COMMENTS) with the follow-up linked to it.
+ * Location is taken in the background (on arrival; on departure while the form is open).
  */
 export function CheckInButtons({ doctorId, open }: { doctorId: string; open: { arrivedAt: string } | null }) {
   const [state, setState] = useState<{ arrivedAt?: string; departedAt?: string | null }>(open ? { arrivedAt: open.arrivedAt } : {});
   const [pending, start] = useTransition();
+  const [reporting, setReporting] = useState(false);
+  const [geo, setGeo] = useState<{ lat?: number; lng?: number }>({});
 
-  const act = (kind: "arrive" | "depart") =>
+  const arrive = () =>
     start(async () => {
-      const geo = await getGeo();
-      const rec = await checkInAction(doctorId, kind, geo);
+      const rec = await checkInAction(doctorId, "arrive", await getGeo());
       if (rec) setState({ arrivedAt: rec.arrivedAt, departedAt: rec.departedAt });
     });
+  const openReport = () => {
+    setReporting(true);
+    getGeo().then(setGeo);
+  };
 
   const arrived = !!state.arrivedAt && !state.departedAt;
 
@@ -49,14 +60,37 @@ export function CheckInButtons({ doctorId, open }: { doctorId: string; open: { a
         </div>
       </div>
       {!arrived ? (
-        <button onClick={() => act("arrive")} disabled={pending} className="btn-accent">
+        <button onClick={arrive} disabled={pending} className="btn-accent">
           {el.customer.arrival}
         </button>
       ) : (
-        <button onClick={() => act("depart")} disabled={pending} className="btn-danger">
+        <button onClick={openReport} className="btn-danger">
           {el.customer.departure}
         </button>
       )}
+
+      <Modal open={reporting} onClose={() => setReporting(false)} title={el.visitReport.title} footer={el.visitReport.note} width="36rem">
+        <ActionForm action={departWithReportAction} className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-2 text-left">
+          <input type="hidden" name="doctorId" value={doctorId} />
+          {geo.lat !== undefined && <input type="hidden" name="lat" value={geo.lat} />}
+          {geo.lng !== undefined && <input type="hidden" name="lng" value={geo.lng} />}
+          {state.arrivedAt && (
+            <p className="text-sm text-[var(--muted)]">
+              {el.customer.arrivalTime}: <span className="font-semibold tabular-nums text-slate-800">{fmtTime(state.arrivedAt)}</span>
+            </p>
+          )}
+          <Field label={el.visitReport.notes}>
+            <DictationTextarea name="notes" rows={4} placeholder={el.visitReport.notesPlaceholder} />
+          </Field>
+          <NextActionFields commentsLabel={el.visitReport.nextComments} />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setReporting(false)} className="btn-ghost">
+              Άκυρο
+            </button>
+            <button className="btn-danger">{el.visitReport.save}</button>
+          </div>
+        </ActionForm>
+      </Modal>
     </div>
   );
 }
