@@ -363,19 +363,26 @@ export interface Task {
   source: TaskSource;
 }
 
-/** One step of an action chain – api.crm.actions/getTimeline {soaction} (newest first, checked 2026-11-19). */
+/**
+ * One step of a timeline, newest first (checked 2026-11-19):
+ *   api.crm.actions/getTimeline {soaction} – the SOACTIONS chain of an action
+ *   api.crm.projects/getTimeline {prjc}    – everything on a project (actions + offers)
+ */
+export type TimelineKind = "TASK" | "CALL" | "EMAIL" | "MEETING" | "OFFER" | "OTHER";
 export interface TimelineEntry {
   id: string;
-  /** SoftOne object: SOTASK / SOCALL / SOEMAIL / SOMEETING */
-  objectType: string;
-  series: string;
+  kind: TimelineKind;
+  /** SoftOne's own name for the document type (fprms) when it sends one; else the UI names it from `kind` */
+  label?: string;
   /** SoftOne document code, e.g. ΕΚΚΡ000005 */
   code: string;
-  /** ACTSTATUS 0–6 */
-  status: number;
-  /** fromDate as ISO (Athens wall-clock converted) */
+  /** ACTSTATUS 0–6 (action timeline only) */
+  status?: number;
+  /** ISO instant (Athens wall-clock converted) */
   at: string;
   comments: string;
+  /** document amount (offers) */
+  amount?: number;
 }
 
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */

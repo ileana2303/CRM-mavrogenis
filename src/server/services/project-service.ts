@@ -94,6 +94,11 @@ export function listProjectSummaries(doctorId: string) {
   return db().projects.summariesByDoctor(doctorId);
 }
 
+/** Actions and offers on the project (api.crm.projects/getTimeline), newest first. */
+export function projectTimeline(id: string) {
+  return db().projects.timeline(id);
+}
+
 export function getProject(id: string) {
   return db().projects.findById(id);
 }

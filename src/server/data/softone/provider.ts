@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, rowToTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, rowToTimelineEntry, rowToProjectTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -246,6 +246,11 @@ export const softOneProvider: DataProvider = {
         out.push(...rows.map((r) => rowToProjectSummary(r, lookups)));
         if (rows.length === 0 || out.length >= Number(res.totalCount ?? 0)) return out;
       }
+    },
+    async timeline(projectId) {
+      if (!/^\d+$/.test(projectId)) throw new Error(`Μη έγκυρο project: ${projectId}`);
+      const res = await js<S1TimelineRow[]>("api.crm.projects", "getTimeline", { prjc: Number(projectId) });
+      return (res.data ?? []).map(rowToProjectTimelineEntry);
     },
     listByUser: todo("projects.listByUser"),
     listAll: todo("projects.listAll"),

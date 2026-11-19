@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, TimelineEntry, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -572,19 +572,45 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
  * { soaction, trnDate, fromDate, code, comments, actStatus, series, objectType } – the chain linked through SOACTIONS.
  */
 export type S1TimelineRow = Record<string, unknown>;
+const KIND_BY_OBJECT: Record<string, TimelineKind> = { SOTASK: "TASK", SOCALL: "CALL", SOEMAIL: "EMAIL", SOMEETING: "MEETING" };
 export function rowToTimelineEntry(r: S1TimelineRow): TimelineEntry {
   const id = pickCol(r, "soaction");
-  const objectType = pickCol(r, "objectType");
+  const objectType = pickCol(r, "objectType")?.toUpperCase();
   const at = s1DateTimeToIso(pickCol(r, "fromDate") ?? pickCol(r, "trnDate"));
   if (!id || !objectType || !at) throw new Error(`getTimeline: row without soaction/objectType/date: ${JSON.stringify(r).slice(0, 200)}`);
+  const status = pickCol(r, "actStatus");
   return {
     id,
-    objectType: objectType.toUpperCase(),
-    series: pickCol(r, "series") ?? "",
+    kind: KIND_BY_OBJECT[objectType] ?? "OTHER",
+    label: KIND_BY_OBJECT[objectType] ? undefined : objectType,
     code: pickCol(r, "code") ?? "",
-    status: Number(pickCol(r, "actStatus") ?? NaN),
+    status: status === undefined ? undefined : Number(status),
     at,
     comments: pickCol(r, "comments") ?? "",
+  };
+}
+
+/**
+ * Row of api.crm.projects/getTimeline {prjc} (checked 2026-11-19 on 6065/6071):
+ * { unit: "crm" | "emporiko", id, soredir, sosource (2021 action / 1351 offer), trndate, code, comments?, amnt, fprms, image }.
+ * soredir seen: 1 call, 2 meeting, 3 task. fprms (SoftOne's type name) is shown as is.
+ */
+const KIND_BY_SOREDIR: Record<string, TimelineKind> = { "1": "CALL", "2": "MEETING", "3": "TASK" };
+export function rowToProjectTimelineEntry(r: S1TimelineRow): TimelineEntry {
+  const id = pickCol(r, "id");
+  const at = s1DateTimeToIso(pickCol(r, "trndate"));
+  if (!id || !at) throw new Error(`projects/getTimeline: row without id/trndate: ${JSON.stringify(r).slice(0, 200)}`);
+  const unit = pickCol(r, "unit")?.toLowerCase();
+  const kind: TimelineKind = unit === "emporiko" ? "OFFER" : (KIND_BY_SOREDIR[pickCol(r, "soredir") ?? ""] ?? "OTHER");
+  const amount = Number(pickCol(r, "amnt") ?? NaN);
+  return {
+    id: `${unit ?? ""}:${id}`,
+    kind,
+    label: pickCol(r, "fprms"),
+    code: pickCol(r, "code") ?? "",
+    at,
+    comments: pickCol(r, "comments") ?? "",
+    amount: Number.isFinite(amount) && amount !== 0 ? amount : undefined,
   };
 }
 

@@ -81,6 +81,8 @@ export interface ProjectsRepo {
   listByDoctor(doctorId: string): Promise<Project[]>;
   /** api.crm.customers/projects {trdr} – the doctor's PRJC rows */
   summariesByDoctor(doctorId: string): Promise<ProjectSummary[]>;
+  /** api.crm.projects/getTimeline {prjc}: actions and offers on the project, newest first */
+  timeline(projectId: string): Promise<TimelineEntry[]>;
   /** setData PRJC (form _CRM_) → the new PRJC id */
   createForDoctor(p: NewS1Project, salesmanId?: string): Promise<{ id: string }>;
   /** getData PRJC form _CRM_ key = prjc; null when SoftOne has no such project */
