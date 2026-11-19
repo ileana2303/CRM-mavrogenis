@@ -182,7 +182,7 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   const time = str(fd, "time");
   if (!NEXT_ACTION_KINDS.includes(kind)) return { error: el.pending.nextKindMissing };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
-  const failed = await attempt("next action", () => closeWithNextAction(taskId, { kind, doctorId, fromTaskId: taskId, at: `${date} ${time}`, comments: str(fd, "comments") }));
+  const failed = await attempt("next action", () => closeWithNextAction(taskId, { kind, doctorId, fromTaskId: taskId, projectId: str(fd, "projectId") || undefined, at: `${date} ${time}`, comments: str(fd, "comments") }));
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
   revalidatePath("/");

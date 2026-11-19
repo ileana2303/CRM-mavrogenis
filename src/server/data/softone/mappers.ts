@@ -537,8 +537,14 @@ function pickCol(r: Record<string, unknown>, ...names: string[]): string | undef
 export const TASK_STATUS_OPEN = 1;
 export const TASK_STATUS_DONE = 3;
 export const TASK_STATUS_CANCELLED = 4;
+/** SOACTION.PRJC – the customer's project the action belongs to (his field, 2026-11-19); omitted when none. */
+function prjcField(projectId?: string): { PRJC?: number } {
+  if (!projectId) return {};
+  if (!/^\d+$/.test(projectId)) throw new Error(`Μη έγκυρο project: ${projectId}`);
+  return { PRJC: Number(projectId) };
+}
 export function taskToSetData(t: Omit<Task, "id">, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
-  return { SOACTION: [{ SERIES: series, TRDR: Number(t.doctorId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
+  return { SOACTION: [{ SERIES: series, TRDR: Number(t.doctorId), ...prjcField(t.projectId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
 }
 export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<Record<string, unknown>>> {
   const h: Record<string, unknown> = {};
@@ -550,15 +556,15 @@ export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<R
 /**
  * Επόμενη ενέργεια → new SOACTION in the object/series of its kind (his mapping 2026-11-19):
  * CALL = SOCALL 1000, EMAIL = SOEMAIL 1003, MEETING = SOMEETING 2003.
- * TRDR, ACTPRSN = login prsn, FROMDATE "yyyy-mm-dd hh:mm" (Athens), COMMENTS, SOACTIONS = soaction of the source
- * Εκκρεμότητα (his field, 2026-11-19). ACTSTATUS left to the series default.
+ * TRDR, PRJC (carried from the Εκκρεμότητα), ACTPRSN = login prsn, FROMDATE "yyyy-mm-dd hh:mm" (Athens), COMMENTS,
+ * SOACTIONS = soaction of the source Εκκρεμότητα (his field, 2026-11-19). ACTSTATUS left to the series default.
  * ASSUMED (not yet confirmed by him): FROMDATE as the date field, no ACTSTATUS.
  */
 export const NEXT_ACTION_OBJECT: Record<NextActionKind, "SOCALL" | "SOEMAIL" | "SOMEETING"> = { CALL: "SOCALL", EMAIL: "SOEMAIL", MEETING: "SOMEETING" };
 export function nextActionToSetData(a: NewNextAction, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
   if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
-  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
+  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
 }
 
 /** Row of api.crm.actions/getPendings: { soaction, series, actStatus, comments, finalDate?, trdr?, actPrsn? } */
@@ -570,6 +576,7 @@ export function rowToTask(r: S1PendingRow, fallbackDoctorId: string, fallbackUse
   return {
     id: pickCol(r, "soaction", "id") ?? "",
     doctorId: pickCol(r, "trdr") ?? fallbackDoctorId,
+    projectId: pickCol(r, "prjc"),
     userId: pickCol(r, "actprsn", "prsn") ?? fallbackUserId,
     title: pickCol(r, "comments", "title") ?? "",
     dueDate: due.slice(0, 10),

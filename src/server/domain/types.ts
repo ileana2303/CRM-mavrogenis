@@ -368,6 +368,8 @@ export interface NewNextAction {
   doctorId: string;
   /** SOACTION of the Εκκρεμότητα this follows → SOACTION.SOACTIONS of the new action */
   fromTaskId: string;
+  /** PRJC of the Εκκρεμότητα, carried to the new action */
+  projectId?: string;
   /** Athens wall-clock "yyyy-mm-dd hh:mm" */
   at: string;
   comments: string;
