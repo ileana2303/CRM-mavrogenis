@@ -39,6 +39,16 @@ response `objs[0].REFID`** — it differs per user). The CRM keeps the clientID 
 | `bootstrap` ✔ | — | `{ success, dRank, cusUtbl05, machine: {categories, marks, models}, prjc: {prjState, prjCategory} }` — every list `[{id, code, name, isActive}]` (`isActive` = selectable). dRank: 1 Ειδικευόμενος, 2 Επιμελητής, 3 Διευθυντής, 4 Καθηγητής. prjState (pipeline, kept in this order): 1000 Ενδιαφέρον, 1010 Demo / Επίδειξη, 1020 Αίτημα προσφοράς, 1030 Προσφορά εστάλη, 1040 Διαπραγμάτευση, 1050 Σε αναμονή, 1060 Κερδήθηκε, 1080 Χάθηκε. prjCategory: 1000 New Clinic, 1001 Replacement, 1002 Public Tender. Cached 5 min by the CRM. **Wanted:** `isClosed` / `isWon` on prjState. |
 | `users` | `role?` | `data: [{ userid, prsn, name, role, salesman, manager }]` — managers need the list of salespeople |
 
+### 1a. Equipment lists — «+ Νέα …» ✔ (2026-11-19)
+
+`api.crm/setMachineCategories` / `setMachineMarks` / `setMachineModels` `{ name, markId? }` → `{ success, id, code, name }`, or
+`{ success, id, name, existing: true }` when that name already exists (case-insensitive) – nothing is inserted then. Tables
+CCCMTRCATGEORY / CCCMTRMARK / CCCMTRMODEL, id = MAX+1 per COMPANY, CODE = the id as a string, ISACTIVE 1.
+Used by the «+ Νέα κατηγορία / εταιρεία / μοντέλο» row at the end of the three pickers on the equipment screen; the app
+clears its 5-min bootstrap cache after a create. Checked with existing names (OCT / Visionix / Solix → existing, no insert).
+**Open on your side:** `setMachineModels` ignores `markId` – the app already sends the row's company; store it in the model
+row (and return it in bootstrap `models[].markId`) and the model list starts filtering by company with no app change.
+
 ## 2. `api.crm.customers` ✔ — doctors are TRDR (SODTYPE 13), field names as in your script
 Row (list ✔): `{ trdr, code, name, afm, email, phone01, phone02, mobilePhone (TRDEXTRA.VARCHAR03), isDoctor, guid }`
 Row (getData ✔): + `actType (CCCACTTYPE), dRank (CCCDRANK id), hospitals[{trdr, trdRel, trdRel_customer_code, trdRel_customer_name, linenum}]` (detail CCCTRDTRDR; trdRel = the hospital's TRDR)
