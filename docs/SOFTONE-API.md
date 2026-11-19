@@ -177,8 +177,16 @@ Not verified against SoftOne yet.
 
 `{ soaction }` → `data: [{ soaction, trnDate, fromDate, code, comments, actStatus, series, objectType }]`, newest first:
 the chain of actions linked to that soaction through `SOACTIONS` (checked on 9183 → itself + SOMEETING 9185).
-Shown by the «Ιστορικό» button on every pending row (modal, loaded on open). A row without soaction/objectType/date
-is an error, not skipped.
+Shown when the task title on a pending row is tapped (modal, loaded on open). A row without soaction/objectType/date
+is an error, not skipped. **Verified 2026-11-19** with the app-made test: 9193 (SOTASK, ACTSTATUS 3) ↔ 9194 (SOCALL 1000,
+FROMDATE 20:00) – SOACTIONS, FROMDATE and PRJC (both on project 6071) are stored with the default form.
+
+### 8c. Project timeline ✔ — `api.crm.projects/getTimeline` (2026-11-19)
+
+`{ prjc }` → `data: [{ unit: "crm" | "emporiko", id, soredir, sosource, trndate, code, comments?, amnt, fprms, image }]`,
+newest first: the project's actions (unit crm, sosource 2021) and offers (unit emporiko, sosource 1351).
+soredir seen: 1 call, 2 meeting, 3 task (email not seen yet → shown with SoftOne's `fprms` name and a neutral icon).
+Shown as the «Χρονολόγιο» card on the project screen.
 
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
