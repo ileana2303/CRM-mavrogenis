@@ -182,6 +182,12 @@ export const el = {
     machines: "μηχανήματα",
     machine: "μηχάνημα",
     catalogEmpty: "Οι λίστες κατηγοριών / εταιρειών / μοντέλων δεν φορτώθηκαν από το SoftOne.",
+    newCategory: "Νέα κατηγορία",
+    newMark: "Νέα εταιρεία",
+    newModel: "Νέο μοντέλο",
+    newNameMissing: "Γράψτε το όνομα στην αναζήτηση.",
+    newTypeFirst: "Γράψτε το όνομα στην αναζήτηση και πατήστε ξανά.",
+    newSaving: "Αποθήκευση στο SoftOne…",
   },
   visit: {
     title: "Επίσκεψη",

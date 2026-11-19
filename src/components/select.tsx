@@ -33,6 +33,11 @@ interface Props {
   disabled?: boolean;
   /** modal title; default: the surrounding Field's label, else ariaLabel / placeholder */
   title?: string;
+  /**
+   * «+ Νέα …» at the end of the list: creates an entry named after the search text. `onCreate` saves it AND selects it
+   * (the parent's option list only learns about it there); it answers { error } to keep the modal open with the message.
+   */
+  create?: { label: string; onCreate: (name: string) => Promise<{ error: string } | void> };
 }
 
 /**
@@ -40,7 +45,7 @@ interface Props {
  * 48px rows, ✓ on the current one, keyboard ↑ ↓ Enter, Esc / backdrop closes). Same props as before, so every
  * screen got the modal at once. The user menu in the top bar is a menu, not a Select, and stays a dropdown.
  */
-export function Select({ options, name, defaultValue, value, onChange, placeholder, searchable, className, ariaLabel, disabled, title }: Props) {
+export function Select({ options, name, defaultValue, value, onChange, placeholder, searchable, className, ariaLabel, disabled, title, create }: Props) {
   const controlled = value !== undefined;
   const [inner, setInner] = useState<string>(defaultValue === null || defaultValue === undefined ? "" : String(defaultValue));
   const selected = controlled ? (value === null || value === undefined ? "" : String(value)) : inner;
@@ -52,8 +57,11 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
   const list = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const id = useId();
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  const withSearch = searchable ?? options.length > 7;
+  // creating needs a name, and the name is typed in the search box
+  const withSearch = !!create || (searchable ?? options.length > 7);
   const current = options.find((o) => o.value === selected);
   const filtered = useMemo(() => {
     const q = fold(query.trim());
@@ -66,6 +74,7 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
     const fieldLabel = trigger.current?.closest("label")?.querySelector(".label")?.textContent?.replace(/\s*\*\s*$/, "").trim();
     setHeading(title ?? fieldLabel ?? ariaLabel ?? placeholder ?? el.app.select);
     setQuery("");
+    setCreateError(null);
     setActive(Math.max(0, options.findIndex((o) => o.value === selected)));
     setOpen(true);
   };
@@ -76,6 +85,24 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
   const choose = (v: string) => {
     if (!controlled) setInner(v);
     onChange?.(v);
+    close();
+  };
+
+  const typed = query.trim();
+  // an entry of that name is already listed → pick it, don't create a twin
+  const exists = !!typed && options.some((o) => fold(o.label) === fold(typed));
+  const runCreate = async () => {
+    if (!create || creating) return;
+    if (!typed) {
+      setCreateError(el.equipment.newTypeFirst);
+      search.current?.focus();
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    const res = await create.onCreate(typed);
+    setCreating(false);
+    if (res && "error" in res) return setCreateError(res.error);
     close();
   };
 
@@ -103,6 +130,7 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
       e.preventDefault();
       const o = filtered[active];
       if (o) choose(o.value);
+      else if (create && !exists) void runCreate(); // keyboard «Go» on a name that isn't listed
     }
   };
 
@@ -163,7 +191,7 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
           onKeyDown={onKeyDown}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-[var(--line)] py-1 outline-none"
         >
-          {filtered.length === 0 && <div className="px-5 py-4 text-sm text-[var(--muted)]">{el.app.notFound}</div>}
+          {filtered.length === 0 && !create && <div className="px-5 py-4 text-sm text-[var(--muted)]">{el.app.notFound}</div>}
           {filtered.map((o, i) => {
             const isSel = o.value === selected;
             return (
@@ -188,6 +216,28 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
             );
           })}
         </div>
+        {create && !exists && (
+          <div className="border-t border-[var(--line)] px-3 py-2">
+            <button
+              type="button"
+              onClick={runCreate}
+              disabled={creating}
+              className="flex w-full items-center gap-3 min-h-12 rounded-xl px-2 text-left font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700">
+                <Icon.plus size={16} />
+              </span>
+              <span className="min-w-0 flex-1 truncate">
+                {creating ? el.equipment.newSaving : typed ? `${create.label} «${typed}»` : `${create.label}…`}
+              </span>
+            </button>
+            {createError && (
+              <p role="alert" className="px-2 pb-1 text-sm text-red-700">
+                {createError}
+              </p>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -7,7 +7,8 @@ import { categoryLabel } from "@/lib/equipment-summary";
 import { Icon } from "@/components/icons";
 import { Select, type SelectOption } from "@/components/select";
 import { fmtEur } from "@/lib/format";
-import type { Equipment, MachineCatalog, MachineRef } from "@/server/domain/types";
+import type { Equipment, MachineCatalog, MachineListKind, MachineRef } from "@/server/domain/types";
+import { createMachineRefAction } from "@/app/(app)/customers/actions";
 
 export type EquipmentRow = Omit<Equipment, "id" | "doctorId">;
 
@@ -42,8 +43,22 @@ function pick(list: MachineRef[], v: string): { id?: string; name: string } {
   return { id: ref?.id, name: ref?.name ?? "" };
 }
 
-export function EquipmentEditor({ initial, catalog }: { initial: EquipmentRow[]; catalog: MachineCatalog }) {
-  const [rows, setRows] = useState<EquipmentRow[]>(() => (initial.length ? initial : [blank()]).map((r) => resolveIds(r, catalog)));
+/** «+ Νέα …»: saves to SoftOne (api.crm/setMachine…) and hands back the entry – new, or the existing one of that name */
+export type CreateRef = (kind: MachineListKind, name: string, markId?: string) => Promise<MachineRef | { error: string }>;
+
+const LIST: Record<MachineListKind, keyof MachineCatalog> = { category: "categories", mark: "marks", model: "models" };
+
+export function EquipmentEditor({ initial, catalog: initialCatalog }: { initial: EquipmentRow[]; catalog: MachineCatalog }) {
+  // own copy of the lists: an entry created in one card shows in every card at once
+  const [catalog, setCatalog] = useState(initialCatalog);
+  const [rows, setRows] = useState<EquipmentRow[]>(() => (initial.length ? initial : [blank()]).map((r) => resolveIds(r, initialCatalog)));
+  const createRef: CreateRef = async (kind, name, markId) => {
+    const res = await createMachineRefAction(kind, name, markId);
+    if ("error" in res) return res;
+    const key = LIST[kind];
+    setCatalog((c) => (c[key].some((x) => x.id === res.ref.id) ? c : { ...c, [key]: [...c[key], res.ref].sort((a, b) => a.name.localeCompare(b.name, "el")) }));
+    return res.ref;
+  };
   const update = (i: number, patch: Partial<EquipmentRow>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const remove = (i: number) => setRows((x) => x.filter((_, j) => j !== i));
   const catalogMissing = !catalog.categories.length && !catalog.marks.length && !catalog.models.length;
@@ -65,7 +80,7 @@ export function EquipmentEditor({ initial, catalog }: { initial: EquipmentRow[];
       ) : (
         <ol className="flex flex-col gap-3">
           {rows.map((r, i) => (
-            <MachineCard key={i} index={i} row={r} catalog={catalog} onChange={(p) => update(i, p)} onRemove={() => remove(i)} />
+            <MachineCard key={i} index={i} row={r} catalog={catalog} createRef={createRef} onChange={(p) => update(i, p)} onRemove={() => remove(i)} />
           ))}
         </ol>
       )}
@@ -88,12 +103,14 @@ function MachineCard({
   index,
   row: r,
   catalog,
+  createRef,
   onChange,
   onRemove,
 }: {
   index: number;
   row: EquipmentRow;
   catalog: MachineCatalog;
+  createRef: CreateRef;
   onChange: (p: Partial<EquipmentRow>) => void;
   onRemove: () => void;
 }) {
@@ -143,6 +160,14 @@ function MachineCard({
             placeholder={el.equipment.choose}
             searchable
             ariaLabel={el.equipment.category}
+            create={{
+              label: el.equipment.newCategory,
+              onCreate: async (name) => {
+                const ref = await createRef("category", name);
+                if ("error" in ref) return ref;
+                onChange({ categoryId: ref.id, category: ref.name });
+              },
+            }}
           />
         </Labeled>
         <Labeled label={el.equipment.manufacturer} span="sm:col-span-4">
@@ -159,6 +184,16 @@ function MachineCard({
             placeholder={el.equipment.choose}
             searchable
             ariaLabel={el.equipment.manufacturer}
+            create={{
+              label: el.equipment.newMark,
+              onCreate: async (name) => {
+                const ref = await createRef("mark", name);
+                if ("error" in ref) return ref;
+                const model = catalog.models.find((m) => m.id === r.modelId);
+                const keepModel = !model?.markId || model.markId === ref.id;
+                onChange({ markId: ref.id, manufacturer: ref.name, ...(keepModel ? {} : { modelId: undefined, model: "" }) });
+              },
+            }}
           />
         </Labeled>
         <Labeled label={el.equipment.model} span="sm:col-span-4">
@@ -174,6 +209,15 @@ function MachineCard({
             placeholder={linked && !r.markId ? el.equipment.chooseMarkFirst : el.equipment.choose}
             searchable
             ariaLabel={el.equipment.model}
+            create={{
+              label: el.equipment.newModel,
+              // sent with the row's company, so SoftOne can link the model to it (once setMachineModels stores markId)
+              onCreate: async (name) => {
+                const ref = await createRef("model", name, r.markId);
+                if ("error" in ref) return ref;
+                onChange({ modelId: ref.id, model: ref.name });
+              },
+            }}
           />
         </Labeled>
         <Labeled label={el.equipment.purchaseYear} span="sm:col-span-3">

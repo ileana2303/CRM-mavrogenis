@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
 import type { ActivityType, DoctorRank } from "@/server/domain/types";
-import { createDoctor, customerTimeline, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
+import { createDoctor, createMachineRef, customerTimeline, saveConsent, saveEquipment, updateDoctor, type DoctorInput } from "@/server/services/customer-service";
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart, departWithReport } from "@/server/services/checkin-service";
 import { addTask, closeWithNextAction, completeTask, logCall, reopenTask, taskTimeline } from "@/server/services/task-service";
-import { NEXT_ACTION_KINDS, type ActionKind, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
+import { NEXT_ACTION_KINDS, type ActionKind, type MachineListKind, type MachineRef, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -289,4 +289,23 @@ export async function setOfferClosedAction(fd: FormData): Promise<ActionResult> 
   }
   revalidatePath(`/customers/${doctorId}/offers`);
   redirect(`/customers/${doctorId}/offers`);
+}
+
+/** «+ Νέα …» in the equipment pickers: the new (or same-named existing) SoftOne entry, or SoftOne's refusal. */
+export async function createMachineRefAction(
+  kind: MachineListKind,
+  name: string,
+  markId?: string,
+): Promise<{ ref: MachineRef; existing: boolean } | { error: string }> {
+  await requireUser();
+  const clean = name.trim();
+  if (!["category", "mark", "model"].includes(kind)) return { error: `Άγνωστη λίστα: ${kind}` };
+  if (!clean) return { error: el.equipment.newNameMissing };
+  try {
+    return await createMachineRef(kind, clean, markId || undefined);
+  } catch (e) {
+    unstable_rethrow(e); // expired session → /login
+    console.error("[customers] create machine ref failed", e);
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 }
