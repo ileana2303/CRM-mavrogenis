@@ -155,8 +155,9 @@ prjc_prjc_name?, actStatus, comments?, dueDate? (tasks), fromDate, actPrsn?, act
 - Type from `soredir`: 1 call (SOCALL), 2 meeting (SOMEETING), 3 task (SOTASK); email by series 1003 (its soredir not seen yet). An
   unknown soredir is an error on purpose – tell me the object and I add it.
 - Date: tasks use `dueDate` (else `fromDate`), the others `fromDate` (date + time).
-- All series come back, including old ones (1001, 1002, 1004–1006, 2000 — open items from 2022–2025). They are shown as they are.
-- **SOMEETING 2001 (Άφιξη/Αναχώρηση) also comes back; the app drops it** by `S1_ARRIVAL_SERIES`. Better removed in the endpoint.
+- Only the CRM series come back: SOTASK 3000, SOCALL 1000, SOEMAIL 1003, SOMEETING 2003 (his fix, 2026-11-19 – earlier the
+  arrivals 2001 and old series 1001/1002/1004–1006/2000 came back too). The app still drops `S1_ARRIVAL_SERIES` as a guard.
+- Re-checked 2026-11-19 after the fix: prsn 59 → 9190, 9189 (both due today); trdr 34583 → 6 rows incl. 9194 SOCALL of prsn 38.
 
 ACTSTATUS: 0 Αδιάφορο · 1 Προς έναρξη · 2 Σε εξέλιξη · 3 Ολοκληρώθηκε · 4 Ακυρώθηκε · 5 Σε αναμονή · 6 Σε αναβολή.
 CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
