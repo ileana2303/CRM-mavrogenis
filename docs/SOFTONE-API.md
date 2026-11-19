@@ -188,6 +188,12 @@ newest first: the project's actions (unit crm, sosource 2021) and offers (unit e
 soredir seen: 1 call, 2 meeting, 3 task (email not seen yet → shown with SoftOne's `fprms` name and a neutral icon).
 Opened by the «Χρονολόγιο» button next to the stage badge on the project screen (modal, loaded on open).
 
+### 8d. Customer timeline ✔ — `api.crm.customers/getTimeline` (2026-11-19)
+
+`{ trdr }` → `data: [{ COMPANY, OBJTYPE ("1" document / "2" action), ID, SOREDIR, SOSOURCE, TFPRMS, TRNDATE, CODE, COMMENTS?, AMNT,
+FPRMS, IMAGE, REDIR }]`, newest first – same meaning as 8c, upper-case columns, `OBJTYPE` instead of `unit` (checked on 34583, 13 rows).
+Opened by the «Χρονολόγιο» button next to «Επεξεργασία» on the customer hub (modal, loaded on open).
+
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
 | step | call |
