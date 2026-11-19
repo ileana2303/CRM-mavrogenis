@@ -223,7 +223,9 @@ Times are Greek local time (Europe/Athens). ACTSTATUS is left at 1.
 **Visit report (2026-11-19, his choice (a)):** Αναχώρηση opens a form; it saves `setData SOMEETING key=<arrival> { "SOACTION": [{
 "FINALDATE", "COMMENTS": <τι έγινε> }] }` (COMMENTS only when written), then the optional next action as §8a with
 `"SOACTIONS": <the arrival>` – so visit → follow-up shows in getTimeline. If only the follow-up fails, the departure stays saved.
-Not verified against SoftOne yet (COMMENTS on 2001 untested).
+**Verified 2026-11-19** through the app (prsn 59, 34583): SOMEETING 9196 (2001, ARV0000013) got FROMDATE, FINALDATE and
+COMMENTS with the default form; follow-up SOCALL 9197 (1000, ΤΗΛC000003) got FROMDATE 22:00, COMMENTS and SOACTIONS 9196;
+getPendingArrivals empty afterwards. ACTSTATUS of the visit stays 1 (unchanged behaviour). Test records left in place.
 
 ## 10. `api.crm.stats` — SoftOne-native figures
 | fn | params | row |
