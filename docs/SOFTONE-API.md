@@ -145,9 +145,9 @@ Offer row: `{ findoc, fincode, trdr, cccproject, cccversion, trndate, sumamnt, c
 
 | step | call |
 |---|---|
-| create | `setData` object `SOTASK`, `{ "SOACTION": [{ "SERIES": 3000, "TRDR", "ACTPRSN": <prsn>, "COMMENTS": <ενέργεια>, "DUEDATE": "yyyy-mm-dd" (προθεσμία), "ACTSTATUS": 1 }] }` — verified (9179, deleted) |
+| create | `setData` object `SOTASK`, `{ "SOACTION": [{ "SERIES": 3000, "TRDR", "PRJC"?: <project, optional>, "ACTPRSN": <prsn>, "COMMENTS": <ενέργεια>, "DUEDATE": "yyyy-mm-dd" (προθεσμία), "ACTSTATUS": 1 }] }` — verified (9179, deleted) |
 | complete / reopen | `setData` `key: <soaction>`, `{ "SOACTION": [{ "ACTSTATUS": 3 }] }` (1 to reopen) — verified |
-| read | `api.crm.actions/getPendings` `{ trdr, prsn, actStatus?: "1,2,3" }` → `{ soaction, series, actStatus, comments }` |
+| read | `api.crm.actions/getPendings` `{ trdr, prsn, actStatus?: "1,2,3" }` → `{ soaction, series, actStatus, comments, prjc }` — `prjc` read as the project link; its name comes from `api.crm.customers/projects` |
 
 ACTSTATUS: 0 Αδιάφορο · 1 Προς έναρξη · 2 Σε εξέλιξη · 3 Ολοκληρώθηκε · 4 Ακυρώθηκε · 5 Σε αναμονή · 6 Σε αναβολή.
 CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
@@ -155,7 +155,7 @@ CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
 **Needed from you in `getPendings`:**
 1. `trdr` optional — the Αναφορά Ημέρας lists pending items per salesperson (`prsn` only). Today a missing `trdr` gives `Invalid column name 'undefined'`.
 2. Add to the row: `dueDate` (προθεσμία → overdue logic), `trdr`, `actPrsn`, `soActionCode`, `trnDate`. Without `dueDate` every item shows as due "today".
-3. Later: a project link (`CCCPROJECT`) once projects have a home.
+3. ~~Project link~~ done 2026-11-19: `SOACTION.PRJC` (standard field, not CCCPROJECT).
 
 ### 8a. Επόμενη ενέργεια (2026-11-19) — row button «→ Επόμενη ενέργεια» next to «✓ Ολοκλήρωση»
 
@@ -168,7 +168,7 @@ One step: create the follow-up, **then** close the Εκκρεμότητα (`ACTS
 | Συνάντηση | `SOMEETING` | 2003 (`S1_MEETING_SERIES`) — same series as the dashboard's appointments |
 
 Payload: `{ "SOACTION": [{ "SERIES", "TRDR", "ACTPRSN": <prsn>, "FROMDATE": "yyyy-mm-dd hh:mm" (Athens), "COMMENTS",
-"SOACTIONS": <soaction of the Εκκρεμότητα> }] }` — `SOACTION.SOACTIONS` links the follow-up to its source (your field, 2026-11-19).
+"SOACTIONS": <soaction of the Εκκρεμότητα>, "PRJC"?: <carried from the Εκκρεμότητα> }] }` — `SOACTION.SOACTIONS` links the follow-up to its source (your field, 2026-11-19).
 Sent with the object's default form (no `form`).
 **Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default.
 Not verified against SoftOne yet.
