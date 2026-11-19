@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
-import type { NextActionKind } from "@/server/domain/types";
+import type { ActionKind, NextActionKind } from "@/server/domain/types";
 import { ActionForm, type ActionResult } from "./action-form";
 import { Modal } from "./modal";
 import { Field } from "./ui";
@@ -31,14 +31,20 @@ export function NextActionButton({
   filter,
   title,
   projectId,
+  itemKind = "TASK",
+  back,
 }: {
   action: (fd: FormData) => Promise<ActionResult>;
   taskId: string;
   doctorId: string;
-  filter: string;
+  filter?: string;
   title: string;
-  /** PRJC of the Εκκρεμότητα – the new action carries it */
+  /** PRJC of the source item – the new action carries it */
   projectId?: string;
+  /** object of the source item, closed after the new action is saved */
+  itemKind?: ActionKind;
+  /** page to return to (default: the customer's pending list) */
+  back?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<NextActionKind>("CALL");
@@ -52,7 +58,9 @@ export function NextActionButton({
         <ActionForm action={action} className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-2 text-left">
           <input type="hidden" name="taskId" value={taskId} />
           <input type="hidden" name="doctorId" value={doctorId} />
-          <input type="hidden" name="filter" value={filter} />
+          {filter && <input type="hidden" name="filter" value={filter} />}
+          {back && <input type="hidden" name="back" value={back} />}
+          <input type="hidden" name="itemKind" value={itemKind} />
           <input type="hidden" name="kind" value={kind} />
           {projectId && <input type="hidden" name="projectId" value={projectId} />}
           <p className="text-sm text-[var(--muted)] line-clamp-2">{title}</p>

@@ -9,7 +9,7 @@ import { createDoctor, customerTimeline, saveConsent, saveEquipment, updateDocto
 import { recordVisit } from "@/server/services/visit-service";
 import { arrive, depart } from "@/server/services/checkin-service";
 import { addTask, closeWithNextAction, completeTask, reopenTask, taskTimeline } from "@/server/services/task-service";
-import { NEXT_ACTION_KINDS, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
+import { NEXT_ACTION_KINDS, type ActionKind, type NextActionKind, type TimelineEntry } from "@/server/domain/types";
 import { setOfferClosed } from "@/server/services/offer-service";
 import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
@@ -162,31 +162,51 @@ export async function addTaskAction(fd: FormData): Promise<ActionResult> {
   redirect(`/customers/${doctorId}/pending`);
 }
 
+const ACTION_KINDS: readonly ActionKind[] = ["TASK", ...NEXT_ACTION_KINDS];
+/** the item's object from the form – absent means an Εκκρεμότητα (SOTASK) */
+function actionKind(fd: FormData, key: string): ActionKind | null {
+  const k = str(fd, key) || "TASK";
+  return (ACTION_KINDS as readonly string[]).includes(k) ? (k as ActionKind) : null;
+}
+/** where to go after a row action: the page it came from (pending list or «Η μέρα μου»); only app-relative paths */
+function backTo(fd: FormData, doctorId: string) {
+  const back = str(fd, "back");
+  return back.startsWith("/") && !back.startsWith("//") ? back : `/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`;
+}
+
 export async function toggleTaskAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const id = str(fd, "id");
   const doctorId = str(fd, "doctorId");
-  const failed = await attempt("toggle task", () => (str(fd, "op") === "reopen" ? reopenTask(id) : completeTask(id)));
+  const kind = actionKind(fd, "itemKind");
+  if (!kind) return { error: `Άγνωστος τύπος ενέργειας: ${str(fd, "itemKind")}` };
+  const failed = await attempt("toggle task", () => (str(fd, "op") === "reopen" ? reopenTask(id, kind) : completeTask(id, kind)));
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
-  redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
+  revalidatePath("/my-day");
+  redirect(backTo(fd, doctorId));
 }
 
-/** «→ Επόμενη ενέργεια» on a pending row: new SOCALL/SOEMAIL/SOMEETING, then the Εκκρεμότητα is closed. */
+/** «→ Επόμενη ενέργεια» on a row: new SOCALL/SOEMAIL/SOMEETING, then the source item is closed on its own object. */
 export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const taskId = str(fd, "taskId");
   const doctorId = str(fd, "doctorId");
   const kind = str(fd, "kind") as NextActionKind;
+  const taskKind = actionKind(fd, "itemKind");
   const date = str(fd, "date");
   const time = str(fd, "time");
+  if (!taskKind) return { error: `Άγνωστος τύπος ενέργειας: ${str(fd, "itemKind")}` };
   if (!NEXT_ACTION_KINDS.includes(kind)) return { error: el.pending.nextKindMissing };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
-  const failed = await attempt("next action", () => closeWithNextAction(taskId, { kind, doctorId, fromTaskId: taskId, projectId: str(fd, "projectId") || undefined, at: `${date} ${time}`, comments: str(fd, "comments") }));
+  const failed = await attempt("next action", () =>
+    closeWithNextAction(taskId, taskKind, { kind, doctorId, fromTaskId: taskId, projectId: str(fd, "projectId") || undefined, at: `${date} ${time}`, comments: str(fd, "comments") }),
+  );
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
+  revalidatePath("/my-day");
   revalidatePath("/");
-  redirect(`/customers/${doctorId}/pending?filter=${str(fd, "filter") || "open"}`);
+  redirect(backTo(fd, doctorId));
 }
 
 /** «Ιστορικό» on a pending row: the chain from api.crm.actions/getTimeline, loaded when the modal opens. */

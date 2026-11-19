@@ -19,6 +19,7 @@ export function NavLinks({ role, variant, compact = false }: { role: Role; varia
 
   if (role !== "SUPPORT") {
     items.push({ href: "/dashboard", label: el.nav.daily, icon: "calendar", match: (p) => p.startsWith("/dashboard") });
+    items.push({ href: "/my-day", label: el.nav.myDay, icon: "alarm", match: (p) => p.startsWith("/my-day") });
     // «Πελάτης» covers search, create and every customer screen (hub + tabs)
     items.push({ href: "/customers", label: el.nav.customer, icon: "search", match: (p) => p.startsWith("/customers") });
     items.push({ href: "/kpis", label: el.nav.kpis, icon: "trending", match: (p) => p.startsWith("/kpis") });

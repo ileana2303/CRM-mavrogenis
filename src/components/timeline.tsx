@@ -15,6 +15,16 @@ const KIND: Record<TimelineKind, { icon: (p: { size?: number }) => ReactNode; bu
   OTHER: { icon: Icon.calendar, bubble: "bg-slate-100 text-slate-600" },
 };
 
+/** the timeline's coloured round icon, for list rows (pending list, «Η μέρα μου») */
+export function KindIcon({ kind, size = 36 }: { kind: TimelineKind; size?: number }) {
+  const k = KIND[kind];
+  return (
+    <span className={`grid shrink-0 place-items-center rounded-full ${k.bubble}`} style={{ width: size, height: size }} title={el.timeline.kinds[kind]}>
+      {k.icon({ size: Math.round(size * 0.48) })}
+    </span>
+  );
+}
+
 const STATUS_TONE: Record<number, string> = {
   1: "bg-brand-50 text-brand-700 ring-brand-200",
   2: "bg-brand-50 text-brand-700 ring-brand-200",
