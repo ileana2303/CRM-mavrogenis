@@ -220,6 +220,11 @@ error says so (no duplicate on retry).
 
 Times are Greek local time (Europe/Athens). ACTSTATUS is left at 1.
 
+**Visit report (2026-11-19, his choice (a)):** Αναχώρηση opens a form; it saves `setData SOMEETING key=<arrival> { "SOACTION": [{
+"FINALDATE", "COMMENTS": <τι έγινε> }] }` (COMMENTS only when written), then the optional next action as §8a with
+`"SOACTIONS": <the arrival>` – so visit → follow-up shows in getTimeline. If only the follow-up fails, the departure stays saved.
+Not verified against SoftOne yet (COMMENTS on 2001 untested).
+
 ## 10. `api.crm.stats` — SoftOne-native figures
 | fn | params | row |
 |---|---|---|
