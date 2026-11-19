@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NextActionKind, TimelineEntry, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -565,6 +565,27 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
   if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
   return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
+}
+
+/**
+ * Row of api.crm.actions/getTimeline {soaction} (checked 2026-11-19):
+ * { soaction, trnDate, fromDate, code, comments, actStatus, series, objectType } – the chain linked through SOACTIONS.
+ */
+export type S1TimelineRow = Record<string, unknown>;
+export function rowToTimelineEntry(r: S1TimelineRow): TimelineEntry {
+  const id = pickCol(r, "soaction");
+  const objectType = pickCol(r, "objectType");
+  const at = s1DateTimeToIso(pickCol(r, "fromDate") ?? pickCol(r, "trnDate"));
+  if (!id || !objectType || !at) throw new Error(`getTimeline: row without soaction/objectType/date: ${JSON.stringify(r).slice(0, 200)}`);
+  return {
+    id,
+    objectType: objectType.toUpperCase(),
+    series: pickCol(r, "series") ?? "",
+    code: pickCol(r, "code") ?? "",
+    status: Number(pickCol(r, "actStatus") ?? NaN),
+    at,
+    comments: pickCol(r, "comments") ?? "",
+  };
 }
 
 /** Row of api.crm.actions/getPendings: { soaction, series, trdr, trdr_customer_code/name, prjc?, prjc_prjc_code?,

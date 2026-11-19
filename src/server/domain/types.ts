@@ -363,6 +363,21 @@ export interface Task {
   source: TaskSource;
 }
 
+/** One step of an action chain – api.crm.actions/getTimeline {soaction} (newest first, checked 2026-11-19). */
+export interface TimelineEntry {
+  id: string;
+  /** SoftOne object: SOTASK / SOCALL / SOEMAIL / SOMEETING */
+  objectType: string;
+  series: string;
+  /** SoftOne document code, e.g. ΕΚΚΡ000005 */
+  code: string;
+  /** ACTSTATUS 0–6 */
+  status: number;
+  /** fromDate as ISO (Athens wall-clock converted) */
+  at: string;
+  comments: string;
+}
+
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */
 export type NextActionKind = "CALL" | "EMAIL" | "MEETING";
 export const NEXT_ACTION_KINDS: readonly NextActionKind[] = ["CALL", "EMAIL", "MEETING"];

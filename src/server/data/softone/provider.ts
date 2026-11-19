@@ -9,7 +9,7 @@ import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, nextActionToSetData, rowToTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -344,6 +344,11 @@ export const softOneProvider: DataProvider = {
       const prsn = await sessionPrsn();
       const res = await s1.setData(cid, NEXT_ACTION_OBJECT[a.kind], nextActionToSetData(a, prsn, nextActionSeries[a.kind]()));
       return { id: String(res.id) };
+    },
+    async timeline(soaction) {
+      if (!/^\d+$/.test(soaction)) throw new Error(`Μη έγκυρη ενέργεια: ${soaction}`);
+      const res = await js<S1TimelineRow[]>("api.crm.actions", "getTimeline", { soaction: Number(soaction) });
+      return (res.data ?? []).map(rowToTimelineEntry);
     },
   },
   // Άφιξη / Αναχώρηση = SOMEETING series 2001 (decided 2026-11-10): FROMDATE on arrival, FINALDATE on departure.

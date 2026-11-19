@@ -28,6 +28,7 @@ import type {
   Target,
   Task,
   NewNextAction,
+  TimelineEntry,
   User,
   Visit,
 } from "../domain/types";
@@ -123,6 +124,8 @@ export interface TasksRepo {
   update(id: string, patch: Partial<Task>): Promise<Task>;
   /** «Επόμενη ενέργεια»: new SOCALL / SOEMAIL / SOMEETING for the customer → its SOACTION id */
   createNextAction(a: NewNextAction): Promise<{ id: string }>;
+  /** api.crm.actions/getTimeline {soaction}: the chain of actions linked to it, newest first */
+  timeline(soaction: string): Promise<TimelineEntry[]>;
 }
 
 export interface CheckInsRepo {

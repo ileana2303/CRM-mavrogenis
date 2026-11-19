@@ -49,6 +49,11 @@ export async function closeWithNextAction(taskId: string, a: NewNextAction) {
   return created;
 }
 
+/** The chain of actions linked to an Εκκρεμότητα (api.crm.actions/getTimeline), newest first. */
+export function taskTimeline(id: string) {
+  return db().tasks.timeline(id);
+}
+
 export function reopenTask(id: string) {
   return db().tasks.update(id, { status: "OPEN", doneAt: undefined });
 }
