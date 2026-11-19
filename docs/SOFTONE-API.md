@@ -214,7 +214,7 @@ error says so (no duplicate on retry).
 | step | call |
 |---|---|
 | Άφιξη | `setData` object `SOMEETING`, `{ "SOACTION": [{ "SERIES": 2001, "TRDR": <trdr>, "ACTPRSN": <prsn of the login user>, "FROMDATE": "yyyy-mm-dd hh:mm" }] }` → `id` (SOACTION) — verified on 2001, record deleted |
-| Αναχώρηση | `setData` object `SOMEETING`, `key: <id>`, `{ "SOACTION": [{ "FINALDATE": "yyyy-mm-dd hh:mm", "ACTSTATUS": 3, "COMMENTS"?: <visit report> }] }` — FINALDATE verified; ACTSTATUS 3 added 2026-11-19 (his decision) |
+| Αναχώρηση | `setData` object `SOMEETING`, `key: <id>`, `{ "SOACTION": [{ "FINALDATE": "yyyy-mm-dd hh:mm", "ACTSTATUS": 3, "COMMENTS"?: <visit report> }] }` — verified incl. ACTSTATUS 3 (9198, ARV0000014, 2026-11-19; getPendingArrivals empty afterwards) |
 | open arrival | `api.crm.actions/getPendingArrivals` `{ trdr, prsn }` → arrivals without FINALDATE. **Currently broken:** `ScriptError: 'body' is undefined [Line: 23 Ofs: 2]` (the function does not read the request body the way the other scripts do). Expected row: `{ soaction, trdr, actprsn, fromdate, finaldate, soactioncode }` — any column casing is accepted |
 | manager log (`/manager/check-ins`) | no endpoint yet → local mirror `data/check_ins.json` (also keeps lat/lng, which have no SoftOne field) |
 
