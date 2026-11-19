@@ -200,6 +200,15 @@ FPRMS, IMAGE, REDIR }]`, newest first – same meaning as 8c, upper-case columns
 Opened by the «Χρονολόγιο» button next to «Επεξεργασία» on the customer hub (modal, loaded on open).
 **AMNT differs by design:** the project timeline sends the net value, the customer timeline the total (VAT included). The app labels them «Καθαρή αξία» / «Σύνολο».
 
+### 8e. Καταγραφή κλήσης (2026-11-19) — after tapping the customer's phone on the hub
+
+Tapping the number dials (`tel:`) and is remembered for 3 h in the browser session; back in the app a banner offers
+«Καταγραφή κλήσης» (also a small pen next to the number). Saves:
+1. `setData` `SOCALL` `{ "SOACTION": [{ "SERIES": 1000, "TRDR", "ACTPRSN", "FROMDATE": <call time>, "COMMENTS", "ACTSTATUS": 3 }] }`
+2. optional follow-up exactly as §8a with `"SOACTIONS": <the new SOCALL>` — so the call → follow-up chain shows in getTimeline.
+**Not verified yet:** ACTSTATUS 3 on create of a SOCALL (works on SOTASK). If only step 2 fails the call stays saved and the
+error says so (no duplicate on retry).
+
 ## 9. Άφιξη / Αναχώρηση ✔ — `SOMEETING` series **2001** (decided 2026-11-10)
 
 | step | call |
