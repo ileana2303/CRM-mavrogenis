@@ -214,18 +214,18 @@ error says so (no duplicate on retry).
 | step | call |
 |---|---|
 | Άφιξη | `setData` object `SOMEETING`, `{ "SOACTION": [{ "SERIES": 2001, "TRDR": <trdr>, "ACTPRSN": <prsn of the login user>, "FROMDATE": "yyyy-mm-dd hh:mm" }] }` → `id` (SOACTION) — verified on 2001, record deleted |
-| Αναχώρηση | `setData` object `SOMEETING`, `key: <id>`, `{ "SOACTION": [{ "FINALDATE": "yyyy-mm-dd hh:mm" }] }` — verified |
+| Αναχώρηση | `setData` object `SOMEETING`, `key: <id>`, `{ "SOACTION": [{ "FINALDATE": "yyyy-mm-dd hh:mm", "ACTSTATUS": 3, "COMMENTS"?: <visit report> }] }` — FINALDATE verified; ACTSTATUS 3 added 2026-11-19 (his decision) |
 | open arrival | `api.crm.actions/getPendingArrivals` `{ trdr, prsn }` → arrivals without FINALDATE. **Currently broken:** `ScriptError: 'body' is undefined [Line: 23 Ofs: 2]` (the function does not read the request body the way the other scripts do). Expected row: `{ soaction, trdr, actprsn, fromdate, finaldate, soactioncode }` — any column casing is accepted |
 | manager log (`/manager/check-ins`) | no endpoint yet → local mirror `data/check_ins.json` (also keeps lat/lng, which have no SoftOne field) |
 
-Times are Greek local time (Europe/Athens). ACTSTATUS is left at 1.
+Times are Greek local time (Europe/Athens). ACTSTATUS: 1 while the visit is open, 3 from the departure on (since 2026-11-19).
 
 **Visit report (2026-11-19, his choice (a)):** Αναχώρηση opens a form; it saves `setData SOMEETING key=<arrival> { "SOACTION": [{
 "FINALDATE", "COMMENTS": <τι έγινε> }] }` (COMMENTS only when written), then the optional next action as §8a with
 `"SOACTIONS": <the arrival>` – so visit → follow-up shows in getTimeline. If only the follow-up fails, the departure stays saved.
 **Verified 2026-11-19** through the app (prsn 59, 34583): SOMEETING 9196 (2001, ARV0000013) got FROMDATE, FINALDATE and
 COMMENTS with the default form; follow-up SOCALL 9197 (1000, ΤΗΛC000003) got FROMDATE 22:00, COMMENTS and SOACTIONS 9196;
-getPendingArrivals empty afterwards. ACTSTATUS of the visit stays 1 (unchanged behaviour). Test records left in place.
+getPendingArrivals empty afterwards. Test records left in place. (Since then the departure also sets ACTSTATUS 3.)
 
 ## 10. `api.crm.stats` — SoftOne-native figures
 | fn | params | row |
