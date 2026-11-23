@@ -39,6 +39,14 @@ response `objs[0].REFID`** — it differs per user). The CRM keeps the clientID 
 | `bootstrap` ✔ | — | `{ success, dRank, cusUtbl05, machine: {categories, marks, models}, prjc: {prjState, prjCategory} }` — every list `[{id, code, name, isActive}]` (`isActive` = selectable). dRank: 1 Ειδικευόμενος, 2 Επιμελητής, 3 Διευθυντής, 4 Καθηγητής. prjState (pipeline, kept in this order): 1000 Ενδιαφέρον, 1010 Demo / Επίδειξη, 1020 Αίτημα προσφοράς, 1030 Προσφορά εστάλη, 1040 Διαπραγμάτευση, 1050 Σε αναμονή, 1060 Κερδήθηκε, 1080 Χάθηκε. prjCategory: 1000 New Clinic, 1001 Replacement, 1002 Public Tender. Cached 5 min by the CRM. **Wanted:** `isClosed` / `isWon` on prjState. |
 | `users` | `role?` | `data: [{ userid, prsn, name, role, salesman, manager }]` — managers need the list of salespeople |
 
+### 1b. Salespeople for ACTPRSN ✔ (2026-11-23)
+
+`api.crm/bootstrap` → `prsns: [{ prsn, code, name, name2 }]` (18 rows, no isActive – all offered). Every form that creates
+an action for later has «Υπεύθυνος» = ACTPRSN, default the logged-in salesperson: «Νέα εκκρεμότητα» (SOTASK), «→ Επόμενη
+ενέργεια» (SOCALL/SOEMAIL/SOMEETING) and the follow-up inside «Καταγραφή κλήσης» / the visit report. Not on Άφιξη/Αναχώρηση
+or the logged call itself (that is whoever was there / made the call). If bootstrap fails the picker is hidden and the
+action goes to the logged-in salesperson.
+
 ### 1a. Equipment lists — «+ Νέα …» ✔ (2026-11-19)
 
 `api.crm/setMachineCategories` / `setMachineMarks` / `setMachineModels` `{ name, markId? }` → `{ success, id, code, name }`, or
