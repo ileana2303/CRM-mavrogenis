@@ -6,7 +6,7 @@
  */
 import { redirect } from "next/navigation";
 import { getSession } from "../../auth/session";
-import type { CheckIn, Doctor, MachineCatalog, MachineListKind, MachineRef, ProjectSummary, Task, User } from "../../domain/types";
+import type { CheckIn, Doctor, MachineCatalog, MachineListKind, MachineRef, Salesperson, ProjectSummary, Task, User } from "../../domain/types";
 import type { DataProvider, DoctorSearch } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
 import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, ACTION_OBJECT, nextActionToSetData, callLogToSetData, rowToTimelineEntry, rowToDocTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
@@ -90,6 +90,8 @@ const toRefs = (rows: S1MasterRow[] | undefined, keepOrder = false): MachineRef[
 type S1Bootstrap = {
   machine?: { categories?: S1MasterRow[]; marks?: S1MasterRow[]; models?: S1MasterRow[] };
   prjc?: { prjState?: S1MasterRow[]; prjCategory?: S1MasterRow[] };
+  /** salespeople for ACTPRSN (owner, 2026-11-23): { prsn, code, name (first), name2 (surname) } */
+  prsns?: Array<{ prsn: string | number; code?: string; name?: string; name2?: string }>;
 };
 let bootstrapCache: { at: number; data: S1Bootstrap } | null = null;
 const CATALOG_TTL = 5 * 60_000;
@@ -345,7 +347,7 @@ export const softOneProvider: DataProvider = {
     async create(t) {
       const cid = await clientId();
       const prsn = await sessionPrsn();
-      const res = await s1.setData(cid, "SOTASK", taskToSetData(t, prsn, taskSeries()));
+      const res = await s1.setData(cid, "SOTASK", taskToSetData(t, t.ownerId || prsn, taskSeries()));
       return { ...t, id: String(res.id) };
     },
     // header delta on the item's own object (ACTSTATUS 3 on a SOCALL goes through SOCALL)
@@ -358,7 +360,7 @@ export const softOneProvider: DataProvider = {
     async createNextAction(a) {
       const cid = await clientId();
       const prsn = await sessionPrsn();
-      const res = await s1.setData(cid, NEXT_ACTION_OBJECT[a.kind], nextActionToSetData(a, prsn, nextActionSeries[a.kind]()));
+      const res = await s1.setData(cid, NEXT_ACTION_OBJECT[a.kind], nextActionToSetData(a, a.ownerId || prsn, nextActionSeries[a.kind]()));
       return { id: String(res.id) };
     },
     // Καταγραφή κλήσης = a done SOCALL in the same call series (1000)
@@ -426,6 +428,13 @@ export const softOneProvider: DataProvider = {
       // no markId on the ref: setMachineModels doesn't store the company yet (it arrives via bootstrap once it does)
       const ref = { id: String(res.id), code: String(res.code ?? res.id), name: res.name ?? name };
       return { ref, existing: !!res.existing };
+    },
+    async salespeople() {
+      const rows = (await bootstrap()).prsns ?? [];
+      return rows
+        .filter((r) => r.prsn !== undefined && r.prsn !== null && r.prsn !== "")
+        .map((r) => ({ id: String(r.prsn), code: r.code ?? "", name: [r.name, r.name2].filter(Boolean).join(" ") || `#${r.prsn}` }))
+        .sort((a, b) => a.name.localeCompare(b.name, "el"));
     },
     // selectable (isActive = selectable in SoftOne) project states / categories for the «Νέο Project» form
     async projectLookups() {

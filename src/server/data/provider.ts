@@ -32,6 +32,7 @@ import type {
   ActionKind,
   TimelineEntry,
   MachineListKind,
+  Salesperson,
   MachineRef,
   User,
   Visit,
@@ -156,6 +157,8 @@ export interface StatsRepo {
   /** «+ Νέα …» in the equipment pickers: adds to a catalog list (or returns the entry of the same name) */
   createMachineRef(kind: MachineListKind, name: string, markId?: string): Promise<{ ref: MachineRef; existing: boolean }>;
   projectLookups(): Promise<ProjectLookups>;
+  /** api.crm/bootstrap `prsns` – who an action can be assigned to (ACTPRSN) */
+  salespeople(): Promise<Salesperson[]>;
   /** api.crm.products/list {q}: the first `limit` matches and how many there are in all */
   searchProducts(q: string, limit: number): Promise<{ total: number; items: ProductHit[] }>;
   findProduct(code: string): Promise<Product | null>;

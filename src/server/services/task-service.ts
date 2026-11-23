@@ -39,8 +39,18 @@ export async function myDay(user: Session) {
   };
 }
 
-export function addTask(doctorId: string, title: string, dueDate: string, user: Session, projectId?: string) {
-  return db().tasks.create({ doctorId, projectId, userId: user.userId, title, dueDate, status: "OPEN", source: "MANUAL" });
+export function addTask(doctorId: string, title: string, dueDate: string, user: Session, projectId?: string, ownerId?: string) {
+  return db().tasks.create({ doctorId, projectId, userId: user.userId, ownerId, title, dueDate, status: "OPEN", source: "MANUAL" });
+}
+
+/** who an action can be assigned to (ACTPRSN), from api.crm/bootstrap; [] when bootstrap fails – the forms then assign to the logged-in salesperson */
+export async function listSalespeople() {
+  try {
+    return await db().stats.salespeople();
+  } catch (e) {
+    console.error("[tasks] salespeople (bootstrap prsns) failed", e);
+    return [];
+  }
 }
 
 /** ACTSTATUS 3 on the item's own object (SOTASK / SOCALL / SOEMAIL / SOMEETING). */
@@ -70,6 +80,7 @@ export async function closeWithNextAction(taskId: string, taskKind: ActionKind, 
  * (SOACTIONS = the call). If only the follow-up fails, the call is saved – NextActionPartialError says so.
  */
 export async function logCall(doctorId: string, at: string, comments: string, next?: Omit<NewNextAction, "doctorId" | "fromTaskId">) {
+  // the logged call itself is the logged-in salesperson's (they made it); only its follow-up can be assigned
   const call = await db().tasks.logCall({ doctorId, at, comments });
   if (!next) return { call };
   try {

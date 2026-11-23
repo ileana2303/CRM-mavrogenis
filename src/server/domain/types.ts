@@ -366,6 +366,8 @@ export interface Task {
   time?: string;
   /** whose item it is (ACTPRSN) – a customer's list shows every salesperson's items */
   ownerName?: string;
+  /** on create: ACTPRSN to assign it to; absent = the logged-in salesperson */
+  ownerId?: string;
   /** customer name/code from the row – the cross-customer «Η μέρα μου» list shows them */
   doctorName?: string;
   doctorCode?: string;
@@ -401,6 +403,14 @@ export interface TimelineEntry {
   amountBasis?: "NET" | "TOTAL";
 }
 
+/** A salesperson an action can be assigned to (ACTPRSN) – api.crm/bootstrap `prsns` (2026-11-23) */
+export interface Salesperson {
+  id: string;
+  code: string;
+  /** «ΑΔΑΜΑΝΤΙΑ ΜΗΝΑ» */
+  name: string;
+}
+
 /** «Καταγραφή κλήσης»: a call that already happened → SOCALL, ACTSTATUS 3 */
 export interface NewCallLog {
   doctorId: string;
@@ -421,6 +431,8 @@ export interface NewNextAction {
   fromTaskId: string;
   /** PRJC of the Εκκρεμότητα, carried to the new action */
   projectId?: string;
+  /** ACTPRSN – who the new action is for; absent = the logged-in salesperson */
+  ownerId?: string;
   /** Athens wall-clock "yyyy-mm-dd hh:mm" */
   at: string;
   comments: string;
