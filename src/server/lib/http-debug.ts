@@ -1,9 +1,27 @@
-/** Log outbound server HTTP (SoftOne, GSIS, …) when SERVER_HTTP_DEBUG=1. Passwords are redacted. */
+/**
+ * Log outbound server HTTP (SoftOne, GSIS, …). Passwords are redacted.
+ *   SERVER_HTTP_DEBUG=1 (or true)        → every call
+ *   SERVER_HTTP_DEBUG=calculate,setData  → only calls whose label contains one of the words (case-insensitive),
+ *                                          e.g. «SoftOne calculate», «SoftOne JS /JS/api.crm.actions/getPendings»
+ */
 
-const MAX_CHARS = 12_000;
+/** per body; SERVER_HTTP_DEBUG_MAX overrides (0 = never clip) – a SoftOne calculate answer is ~25.000 chars */
+const MAX_CHARS = (() => {
+  const n = Number(process.env.SERVER_HTTP_DEBUG_MAX);
+  return Number.isFinite(n) && process.env.SERVER_HTTP_DEBUG_MAX !== undefined && process.env.SERVER_HTTP_DEBUG_MAX !== "" ? n : 12_000;
+})();
 
-export function httpDebugEnabled(): boolean {
-  return process.env.SERVER_HTTP_DEBUG === "1" || process.env.SERVER_HTTP_DEBUG === "true";
+export function httpDebugEnabled(label?: string): boolean {
+  const v = (process.env.SERVER_HTTP_DEBUG ?? "").trim();
+  if (!v || v === "0" || v === "false") return false;
+  if (v === "1" || v === "true") return true;
+  if (label === undefined) return true;
+  const l = label.toLowerCase();
+  return v
+    .split(",")
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean)
+    .some((w) => l.includes(w));
 }
 
 const SECRET_KEYS = /^password$/i;
@@ -27,12 +45,12 @@ export function redactBody(body: Record<string, unknown>): Record<string, unknow
 }
 
 function clip(text: string): string {
-  if (text.length <= MAX_CHARS) return text;
+  if (MAX_CHARS <= 0 || text.length <= MAX_CHARS) return text;
   return `${text.slice(0, MAX_CHARS)}\n… (${text.length - MAX_CHARS} more chars)`;
 }
 
 export function logHttpOutbound(label: string, url: string, requestBody: unknown, response: { status: number; bodyText: string }, ms: number) {
-  if (!httpDebugEnabled()) return;
+  if (!httpDebugEnabled(label)) return;
   const req =
     requestBody !== undefined && typeof requestBody === "object" && requestBody !== null && !Array.isArray(requestBody)
       ? JSON.stringify(redactBody(requestBody as Record<string, unknown>), null, 2)
@@ -45,8 +63,11 @@ export function logHttpOutbound(label: string, url: string, requestBody: unknown
   } catch {
     // keep raw (SOAP, etc.)
   }
+  // SERVER_HTTP_DEBUG_RESPONSE=0 → the request only (e.g. the payload sent to calculate, without its ~25.000-char answer)
+  const withResponse = !["0", "false"].includes((process.env.SERVER_HTTP_DEBUG_RESPONSE ?? "").trim());
   console.log(
-    `\n[http ${label}] ${Math.round(ms)}ms HTTP ${response.status}\n→ ${url}\n--- request ---\n${clip(req)}\n--- response ---\n${clip(res)}\n`,
+    `\n[http ${label}] ${Math.round(ms)}ms HTTP ${response.status}\n→ ${url}\n--- request ---\n${clip(req)}\n` +
+      (withResponse ? `--- response ---\n${clip(res)}\n` : ""),
   );
 }
 
