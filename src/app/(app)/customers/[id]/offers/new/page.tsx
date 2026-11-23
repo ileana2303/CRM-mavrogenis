@@ -12,11 +12,20 @@ export const metadata = { title: el.projects.newOffer };
  * «Νέα προσφορά» without a project, from the customer's offers list → setData SALDOC form _CRM_: SERIES = S1_OFFER_SERIES,
  * TRDR = the doctor, SALESMAN = session PRSN, no PRJC. Same form and SoftOne `calculate` as the project offer.
  */
-export default async function NewCustomerOfferPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NewCustomerOfferPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ fromTask?: string; fromKind?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  // «Προσφορά» as next action of an item: closed when this offer is saved
+  const fromTask = sp.fromTask && /^\d+$/.test(sp.fromTask) && ["TASK", "CALL", "EMAIL", "MEETING"].includes(sp.fromKind ?? "TASK") ? { id: sp.fromTask, kind: sp.fromKind ?? "TASK" } : undefined;
   const back = `/customers/${id}/offers`;
   if (SOON.projectOffer) return <ComingSoon title={metadata.title} backHref={back} />;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
-  return <NewOfferForm action={createProjectOfferAction} doctorId={id} projectId="" backHref={back} doctorName={doctorFullName(doctor)} />;
+  return <NewOfferForm action={createProjectOfferAction} doctorId={id} projectId="" backHref={back} doctorName={doctorFullName(doctor)} fromTask={fromTask} />;
 }

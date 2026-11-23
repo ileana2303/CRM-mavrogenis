@@ -27,6 +27,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const projectById = new Map(projects.map((p) => [p.id, p]));
   // only selectable (isActive) projects are offered for new tasks; existing links show whatever SoftOne has
   const projectOptions = projects.filter((p) => p.active).map((p) => ({ value: p.id, label: p.title, hint: p.code }));
+  const offerProjects = projects.filter((p) => p.active).map((p) => ({ id: p.id, title: p.title, code: p.code }));
   const shown = tasks.filter((t) => (filter === "all" ? true : filter === "open" ? t.status === "OPEN" : filter === "overdue" ? t.view === "OVERDUE" : t.view === "DONE"));
 
   return (
@@ -85,7 +86,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
                     {t.view === "OVERDUE" ? <Badge tone="red">{el.pending.statusOverdue}</Badge> : t.view === "DONE" ? <Badge tone="green">{el.pending.statusDone}</Badge> : <Badge tone="blue">{el.pending.statusOpen}</Badge>}
                   </td>
                   <td className="text-right">
-                    <TaskActions task={t} filter={filter} />
+                    <TaskActions task={t} filter={filter} projects={offerProjects} />
                   </td>
                 </tr>
               ))}

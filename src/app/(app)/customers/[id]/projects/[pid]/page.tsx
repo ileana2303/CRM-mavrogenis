@@ -24,10 +24,10 @@ export default async function ProjectViewPage({
   searchParams,
 }: {
   params: Promise<{ id: string; pid: string }>;
-  searchParams: Promise<{ saved?: string; stage?: string }>;
+  searchParams: Promise<{ saved?: string; stage?: string; task?: string }>;
 }) {
   const { id, pid } = await params;
-  const { saved, stage } = await searchParams;
+  const { saved, stage, task } = await searchParams;
   if (SOON.projectDetail) return <ComingSoon title={metadata.title} backHref={`/customers/${id}/projects`} />;
   const [doctor, project, lookups] = await Promise.all([getDoctor(id), getProjectDetail(pid), projectLookups()]);
   if (!doctor || !project || project.doctorId !== id) notFound();
@@ -60,6 +60,7 @@ export default async function ProjectViewPage({
       {saved === "state" && <Notice tone="green">{el.projects.stateSaved}</Notice>}
       {saved === "offer" && <Notice tone="green">{el.projects.offerSaved}</Notice>}
       {saved === "offer" && stage === "failed" && <Notice tone="amber">{el.projects.offerStageFailed}</Notice>}
+      {saved === "offer" && task === "failed" && <Notice tone="amber">{el.pending.taskCloseFailed}</Notice>}
 
       <Card>
         <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4">

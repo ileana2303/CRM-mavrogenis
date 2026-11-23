@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
 import type { ActionKind, NextActionKind } from "@/server/domain/types";
@@ -8,11 +9,20 @@ import { ActionForm, type ActionResult } from "./action-form";
 import { Modal } from "./modal";
 import { Field } from "./ui";
 
-const KINDS: Array<[NextActionKind, string]> = [
+/** «Προσφορά» isn't a scheduled SOACTION: it opens the offer form, and the source closes once the offer is saved */
+type Choice = NextActionKind | "OFFER";
+const KINDS: Array<[Choice, string]> = [
   ["CALL", el.pending.nextCall],
   ["EMAIL", el.pending.nextEmail],
   ["MEETING", el.pending.nextMeeting],
+  ["OFFER", el.pending.nextOffer],
 ];
+
+export interface NextOfferProject {
+  id: string;
+  title: string;
+  code: string;
+}
 
 /** Next full hour in Athens as "hh:00" (23:xx → "23:30"). */
 function nextHour(): string {
@@ -21,8 +31,9 @@ function nextHour(): string {
 }
 
 /**
- * «→ Επόμενη ενέργεια» next to «✓ Ολοκλήρωση» on an open Εκκρεμότητα: picks Τηλέφωνο / Email / Συνάντηση + when,
- * creates that SOACTION in SoftOne and closes the Εκκρεμότητα in one step.
+ * «→ Επόμενη ενέργεια» next to «✓ Ολοκλήρωση» on an open item: Τηλέφωνο / Email / Συνάντηση + when creates that SOACTION
+ * and closes the item in one step. Προσφορά instead opens the offer form (in the chosen project, or none) carrying the
+ * item, which is closed when the offer is saved – an abandoned form leaves it open.
  */
 export function NextActionButton({
   action,
@@ -33,6 +44,7 @@ export function NextActionButton({
   projectId,
   itemKind = "TASK",
   back,
+  projects,
 }: {
   action: (fd: FormData) => Promise<ActionResult>;
   taskId: string;
@@ -45,9 +57,24 @@ export function NextActionButton({
   itemKind?: ActionKind;
   /** page to return to (default: the customer's pending list) */
   back?: string;
+  /** the customer's projects, offered for a «Προσφορά» next action; absent → the item's own project (or none) */
+  projects?: NextOfferProject[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<NextActionKind>("CALL");
+  const [kind, setKind] = useState<Choice>("CALL");
+  const [offerProject, setOfferProject] = useState(projectId ?? "");
+  // «Χωρίς project», then the item's own project first, then the customer's other projects
+  const own = projectId ? (projects?.find((p) => p.id === projectId) ?? { id: projectId, title: `#${projectId}`, code: "" }) : null;
+  const projectChoices: NextOfferProject[] = [
+    ...(own ? [own] : []),
+    { id: "", title: el.offers.noProject, code: "" },
+    ...(projects ?? []).filter((p) => p.id !== projectId),
+  ];
+  const goToOffer = () => {
+    const q = new URLSearchParams({ fromTask: taskId, fromKind: itemKind });
+    router.push(offerProject ? `/customers/${doctorId}/projects/${offerProject}/offers/new?${q}` : `/customers/${doctorId}/offers/new?${q}`);
+  };
 
   return (
     <>
@@ -67,7 +94,7 @@ export function NextActionButton({
 
           <div>
             <span className="label">{el.pending.nextKind}</span>
-            <div role="radiogroup" aria-label={el.pending.nextKind} className="grid grid-cols-3 gap-2">
+            <div role="radiogroup" aria-label={el.pending.nextKind} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {KINDS.map(([k, label]) => (
                 <button
                   key={k}
@@ -83,25 +110,59 @@ export function NextActionButton({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={el.pending.nextDate} required>
-              <input name="date" type="date" className="input" required defaultValue={athensDate()} />
-            </Field>
-            <Field label={el.pending.nextTime} required>
-              <input name="time" type="time" className="input" required defaultValue={nextHour()} />
-            </Field>
-          </div>
+          {kind === "OFFER" ? (
+            <>
+              <div>
+                <span className="label">{el.pending.nextOfferProject}</span>
+                <div role="radiogroup" aria-label={el.pending.nextOfferProject} className="flex max-h-60 flex-col gap-1.5 overflow-y-auto">
+                  {projectChoices.map((p) => (
+                    <button
+                      key={p.id || "none"}
+                      type="button"
+                      role="radio"
+                      aria-checked={offerProject === p.id}
+                      onClick={() => setOfferProject(p.id)}
+                      className={`flex min-h-11 shrink-0 items-center gap-3 rounded-xl border px-3 text-left ${offerProject === p.id ? "border-brand-500 bg-brand-50 text-brand-800" : "border-[var(--line)] bg-white"}`}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{p.title}</span>
+                      {p.code && <span className="shrink-0 text-xs tabular-nums text-[var(--muted)]">{p.code}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-[var(--muted)]">{el.pending.nextOfferNote}</p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
+                  Άκυρο
+                </button>
+                <button type="button" onClick={goToOffer} className="btn-primary">
+                  {el.pending.nextOfferGo}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={el.pending.nextDate} required>
+                  <input name="date" type="date" className="input" required defaultValue={athensDate()} />
+                </Field>
+                <Field label={el.pending.nextTime} required>
+                  <input name="time" type="time" className="input" required defaultValue={nextHour()} />
+                </Field>
+              </div>
 
-          <Field label={el.pending.nextComments}>
-            <textarea name="comments" className="input min-h-24" defaultValue={title} />
-          </Field>
+              <Field label={el.pending.nextComments}>
+                <textarea name="comments" className="input min-h-24" defaultValue={title} />
+              </Field>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
-              Άκυρο
-            </button>
-            <button className="btn-primary">{el.pending.nextSave}</button>
-          </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
+                  Άκυρο
+                </button>
+                <button className="btn-primary">{el.pending.nextSave}</button>
+              </div>
+            </>
+          )}
         </ActionForm>
       </Modal>
     </>

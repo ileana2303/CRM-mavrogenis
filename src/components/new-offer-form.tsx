@@ -23,6 +23,7 @@ export function NewOfferForm({
   doctorName,
   projectTitle,
   projectCode,
+  fromTask,
 }: {
   action: (fd: FormData) => Promise<ActionResult>;
   doctorId: string;
@@ -32,6 +33,8 @@ export function NewOfferForm({
   /** absent = an offer without a project */
   projectTitle?: string;
   projectCode?: string;
+  /** «Προσφορά» as next action: the item (Εκκρεμότητα / call / …) closed once this offer is saved */
+  fromTask?: { id: string; kind: string };
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<OfferLinesStatus>({ busy: false, dirty: false, count: 0, calc: null, calcError: null });
@@ -87,6 +90,8 @@ export function NewOfferForm({
       >
         <input type="hidden" name="doctorId" value={doctorId} />
         <input type="hidden" name="projectId" value={projectId} />
+        {fromTask && <input type="hidden" name="fromTask" value={fromTask.id} />}
+        {fromTask && <input type="hidden" name="fromKind" value={fromTask.kind} />}
 
         {/* header */}
         <button type="button" onClick={() => leave(backHref)} className="btn-ghost -ml-3 self-start text-brand-700">
@@ -122,6 +127,7 @@ export function NewOfferForm({
               )}
             </span>
           </div>
+          {fromTask && <p className="text-sm text-brand-700">{el.pending.fromTaskNote}</p>}
         </header>
 
         <OfferLinesEditor doctorId={doctorId} projectId={projectId} onStatus={onStatus} />

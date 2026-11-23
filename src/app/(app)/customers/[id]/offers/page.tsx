@@ -15,9 +15,9 @@ import { setOfferClosedAction } from "../../actions";
 
 export const metadata = { title: el.offers.title };
 
-export default async function OffersPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
+export default async function OffersPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; task?: string }> }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, task } = await searchParams;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const [offers, projects] = await Promise.all([listOffersForDoctor(id), SOON.projectOffer ? [] : listProjectSummaries(id)]);
@@ -30,6 +30,7 @@ export default async function OffersPage({ params, searchParams }: { params: Pro
       <PageTitle right={SOON.projectOffer ? null : <NewOfferButton doctorId={id} projects={projectOptions} />}>{el.offers.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
       {saved === "offer" && <Notice tone="green">{el.offers.saved}</Notice>}
+      {task === "failed" && <Notice tone="amber">{el.pending.taskCloseFailed}</Notice>}
 
       {offers.length === 0 ? (
         <div className="card">

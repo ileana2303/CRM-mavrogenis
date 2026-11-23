@@ -2,13 +2,13 @@ import { el } from "@/lib/i18n/el";
 import type { Task } from "@/server/domain/types";
 import { nextActionAction, toggleTaskAction } from "@/app/(app)/customers/actions";
 import { ActionForm } from "./action-form";
-import { NextActionButton } from "./next-action-button";
+import { NextActionButton, type NextOfferProject } from "./next-action-button";
 
 /**
  * The row buttons of an Εκκρεμότητα / call / email / meeting: «✓ Ολοκλήρωση» (or «Επαναφορά» when done) and
  * «→ Επόμενη ενέργεια». Both act on the item's own SoftOne object. Used by the customer's pending list and «Η μέρα μου».
  */
-export function TaskActions({ task, filter, back }: { task: Task; filter?: string; back?: string }) {
+export function TaskActions({ task, filter, back, projects }: { task: Task; filter?: string; back?: string; projects?: NextOfferProject[] }) {
   const kind = task.kind ?? "TASK";
   const done = task.status === "DONE";
   return (
@@ -33,6 +33,7 @@ export function TaskActions({ task, filter, back }: { task: Task; filter?: strin
           title={task.title}
           projectId={task.projectId}
           itemKind={kind}
+          projects={projects}
         />
       )}
     </div>

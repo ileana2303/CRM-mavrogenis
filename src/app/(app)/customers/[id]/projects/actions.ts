@@ -4,9 +4,10 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/current-user";
-import type { FollowUpContactMethod, FollowUpResult, NextAction, OfferCalc, ProductHit, ProjectType } from "@/server/domain/types";
+import type { ActionKind, FollowUpContactMethod, FollowUpResult, NextAction, OfferCalc, ProductHit, ProjectType } from "@/server/domain/types";
 import { addFollowUp, closeProject, createProject, createProjectForDoctor, calculateOfferForProject, createOfferForProject, getProject, projectTimeline, searchProducts, setProjectState, requestOffer, reviseOffer } from "@/server/services/project-service";
 import { getOffer, markOfferSent } from "@/server/services/offer-service";
+import { completeTask } from "@/server/services/task-service";
 import type { ActionResult } from "@/components/action-form";
 import type { TimelineResult } from "@/components/timeline-button";
 import { el } from "@/lib/i18n/el";
@@ -241,9 +242,25 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
     console.error("[projects] create offer failed", e);
     return { error: e instanceof Error ? e.message : String(e) };
   }
+  // «Προσφορά» as next action: the source item closes now that the offer exists. A refusal must NOT come back as a form
+  // error (a second «Αποθήκευση» would duplicate the offer) – the page says the offer is saved and the item still open.
+  const fromTask = str(fd, "fromTask");
+  const fromKind = str(fd, "fromKind") || "TASK";
+  let taskFailed = false;
+  if (/^\d+$/.test(fromTask) && ["TASK", "CALL", "EMAIL", "MEETING"].includes(fromKind)) {
+    try {
+      await completeTask(fromTask, fromKind as ActionKind);
+    } catch (e) {
+      console.error("[projects] closing the source item after the offer failed", e);
+      taskFailed = true;
+    }
+    revalidatePath(`/customers/${doctorId}/pending`);
+    revalidatePath("/dashboard");
+  }
+  const taskQs = taskFailed ? "&task=failed" : "";
   if (!projectId) {
     revalidatePath(`/customers/${doctorId}/offers`);
-    redirect(`/customers/${doctorId}/offers?saved=offer`);
+    redirect(`/customers/${doctorId}/offers?saved=offer${taskQs}`);
   }
   // the offer exists now → the project moves to «Προσφορά εστάλη» (owner, 2026-11-16). If SoftOne refuses that, the
   // offer must NOT come back as a form error (a second «Αποθήκευση» would duplicate it): the project screen says so.
@@ -257,7 +274,7 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
   revalidatePath(`/customers/${doctorId}/projects/${projectId}`);
   revalidatePath(`/customers/${doctorId}/projects`);
   revalidatePath(`/customers/${doctorId}/offers`);
-  redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer${stageFailed ? "&stage=failed" : ""}`);
+  redirect(`/customers/${doctorId}/projects/${projectId}?saved=offer${stageFailed ? "&stage=failed" : ""}${taskQs}`);
 }
 
 
