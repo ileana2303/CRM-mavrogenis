@@ -1,3 +1,5 @@
+import { logHttpOutbound } from "../../lib/http-debug";
+
 /**
  * SoftOne Web Services client for mavrogenis.oncloud.gr (Series 6).
  *
@@ -56,15 +58,19 @@ export class S1Client {
 
   private async post<T>(path: string, body: Record<string, unknown>): Promise<T> {
     if (!this.cfg.url) throw new S1Error("S1_URL is not configured");
-    const res = await fetch(this.cfg.url + path, {
+    const url = this.cfg.url + path;
+    const label = path ? `SoftOne JS ${path}` : `SoftOne ${String(body.service ?? "service")}`;
+    const t0 = performance.now();
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       cache: "no-store",
     });
-    if (!res.ok) throw new S1Error(`SoftOne HTTP ${res.status}`);
     const charset = /charset=([\w-]+)/i.exec(res.headers.get("content-type") ?? "")?.[1] ?? "utf-8";
     const text = new TextDecoder(charset).decode(await res.arrayBuffer());
+    logHttpOutbound(label, url, body, { status: res.status, bodyText: text }, performance.now() - t0);
+    if (!res.ok) throw new S1Error(`SoftOne HTTP ${res.status}`);
     let json: T & { success?: boolean; error?: string };
     try {
       json = JSON.parse(text);

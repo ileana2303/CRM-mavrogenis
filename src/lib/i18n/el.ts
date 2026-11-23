@@ -55,6 +55,8 @@ export const el = {
     title: "Σύνδεση",
     username: "Username",
     password: "Password",
+    showPassword: "Εμφάνιση κωδικού",
+    hidePassword: "Απόκρυψη κωδικού",
     submit: "Σύνδεση",
     error: "Λάθος όνομα χρήστη ή κωδικός.",
     noRole: "Ο χρήστης συνδέθηκε στο SoftOne αλλά δεν έχει ρόλο CRM (δεν συνδέεται με πρόσωπο/ρόλο). Επικοινωνήστε με τον διαχειριστή.",

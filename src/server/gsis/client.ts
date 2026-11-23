@@ -4,6 +4,8 @@
  * No sandbox; each call counts against that ΑΦΜ's monthly limit, and the person looked up sees who asked in their TAXISnet.
  */
 
+import { logHttpOutbound, redactSoapBody } from '../lib/http-debug';
+
 const ENDPOINT = 'https://www1.gsis.gr/wsaade/RgWsPublic2/RgWsPublic2';
 const TIMEOUT_MS = 15_000;
 
@@ -85,12 +87,16 @@ export async function lookupAfm(afm: string): Promise<AfmInfo | null> {
   const username = process.env.GSIS_USERNAME;
   const password = process.env.GSIS_PASSWORD;
   if (!username || !password) throw new Error('gsis: not configured');
+  const soapBody = afmRequest(afm, username, password);
+  const t0 = performance.now();
   const response = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/soap+xml; charset=utf-8' },
-    body: afmRequest(afm, username, password),
+    body: soapBody,
     signal: AbortSignal.timeout(TIMEOUT_MS),
     cache: 'no-store',
   });
-  return parseAfmResponse(await response.text());
+  const text = await response.text();
+  logHttpOutbound(`GSIS ΑΦΜ ${afm}`, ENDPOINT, redactSoapBody(soapBody), { status: response.status, bodyText: text }, performance.now() - t0);
+  return parseAfmResponse(text);
 }
