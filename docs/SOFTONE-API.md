@@ -142,6 +142,9 @@ SoftOne approves the document at once (APPRV 1).
 (price rule / line script). Also open: print / PDF / email of the offer, the terms text (`REMARKS`, `CCCOFFERBODY`),
 revision (in place vs new version), approval by support first.
 
+**Without a project (2026-11-23):** same payload without `PRJC` (customer's offers list → «Χωρίς project»). SoftOne
+`calculate` checked on such a draft (34583, nothing saved); a real save not tested yet.
+
 ### Read lists
 | fn | params | row |
 |---|---|---|
@@ -187,6 +190,11 @@ Payload: `{ "SOACTION": [{ "SERIES", "TRDR", "ACTPRSN": <prsn>, "FROMDATE": "yyy
 Sent with the object's default form (no `form`).
 **Not yet confirmed by you:** FROMDATE as the date field for all three, ACTSTATUS left to the series default.
 Not verified against SoftOne yet.
+
+**Προσφορά as next action (2026-11-23):** the 4th option opens the offer form (chosen project, or none) carrying the source item;
+after `setData SALDOC` succeeds the item gets ACTSTATUS 3 on its own object. An abandoned form leaves it open; if only the
+close fails, the offer stays saved and the page says the item is still open. **No link** from the SALDOC to the source
+SOACTION is stored (no field known) – the offer won't show in that item's getTimeline chain.
 
 ### 8b. Ιστορικό ✔ — `api.crm.actions/getTimeline` (2026-11-19)
 
