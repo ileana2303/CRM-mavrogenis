@@ -15,6 +15,8 @@ import type { ActionResult } from "@/components/action-form";
 import { el } from "@/lib/i18n/el";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
+/** ACTPRSN chosen in «Υπεύθυνος»; empty/invalid → undefined = the logged-in salesperson */
+const owner = (fd: FormData, k = "ownerId") => (/^\d+$/.test(str(fd, k)) ? str(fd, k) : undefined);
 
 /** Runs a SoftOne write; a refusal comes back as `{ error }` for ActionForm (the form keeps what was typed). */
 async function attempt(what: string, fn: () => Promise<unknown>): Promise<ActionResult> {
@@ -156,7 +158,7 @@ export async function addTaskAction(fd: FormData): Promise<ActionResult> {
   const title = str(fd, "title");
   const dueDate = str(fd, "dueDate");
   if (!title || !dueDate) return { error: "Συμπληρώστε τίτλο και ημερομηνία." };
-  const failed = await attempt("add task", () => addTask(doctorId, title, dueDate, user, str(fd, "projectId") || undefined));
+  const failed = await attempt("add task", () => addTask(doctorId, title, dueDate, user, str(fd, "projectId") || undefined, owner(fd)));
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
   redirect(`/customers/${doctorId}/pending`);
@@ -200,7 +202,7 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
   if (!NEXT_ACTION_KINDS.includes(kind)) return { error: el.pending.nextKindMissing };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
   const failed = await attempt("next action", () =>
-    closeWithNextAction(taskId, taskKind, { kind, doctorId, fromTaskId: taskId, projectId: str(fd, "projectId") || undefined, at: `${date} ${time}`, comments: str(fd, "comments") }),
+    closeWithNextAction(taskId, taskKind, { kind, doctorId, fromTaskId: taskId, projectId: str(fd, "projectId") || undefined, ownerId: owner(fd), at: `${date} ${time}`, comments: str(fd, "comments") }),
   );
   if (failed) return failed;
   revalidatePath(`/customers/${doctorId}/pending`);
@@ -210,14 +212,14 @@ export async function nextActionAction(fd: FormData): Promise<ActionResult> {
 }
 
 /** The optional «Επόμενη ενέργεια» of NextActionFields; comments default to the parent's notes. */
-function readNextAction(fd: FormData, fallbackComments: string): { kind: NextActionKind; at: string; comments: string } | { error: string } | undefined {
+function readNextAction(fd: FormData, fallbackComments: string): { kind: NextActionKind; at: string; comments: string; ownerId?: string } | { error: string } | undefined {
   const kind = str(fd, "nextKind");
   if (!kind) return undefined;
   if (!NEXT_ACTION_KINDS.includes(kind as NextActionKind)) return { error: el.pending.nextKindMissing };
   const date = str(fd, "nextDate");
   const time = str(fd, "nextTime");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { error: el.pending.nextWhenMissing };
-  return { kind: kind as NextActionKind, at: `${date} ${time}`, comments: str(fd, "nextComments") || fallbackComments };
+  return { kind: kind as NextActionKind, at: `${date} ${time}`, comments: str(fd, "nextComments") || fallbackComments, ownerId: owner(fd, "nextOwnerId") };
 }
 
 /** Αναχώρηση with the visit report: notes on the arrival's SOMEETING 2001 + optional linked next action. */

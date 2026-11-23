@@ -5,6 +5,7 @@ import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
 import type { NextActionKind } from "@/server/domain/types";
 import { Field } from "./ui";
+import { OwnerSelect } from "./owner-select";
 
 const nextHour = () => {
   const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", hour: "2-digit", hour12: false }).format(new Date())) % 24;
@@ -57,6 +58,7 @@ export function NextActionFields({ commentsLabel }: { commentsLabel: string }) {
           <Field label={commentsLabel}>
             <textarea name="nextComments" className="input min-h-20" />
           </Field>
+          <OwnerSelect name="nextOwnerId" />
         </>
       )}
     </>
