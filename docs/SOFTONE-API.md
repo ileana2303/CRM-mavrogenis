@@ -46,6 +46,9 @@ an action for later has «Υπεύθυνος» = ACTPRSN, default the logged-in 
 ενέργεια» (SOCALL/SOEMAIL/SOMEETING) and the follow-up inside «Καταγραφή κλήσης» / the visit report. Not on Άφιξη/Αναχώρηση
 or the logged call itself (that is whoever was there / made the call). If bootstrap fails the picker is hidden and the
 action goes to the logged-in salesperson.
+`api.crm.prsnin/search { q? }` → same rows/columns as `prsns` (checked 2026-11-23: plain = the same 18). Not used: bootstrap
+already has the list and the picker searches it case/accent-insensitively, while the endpoint's `q` is case-sensitive
+(`μαρ` → 0). Switch to it only if the assignable people outgrow bootstrap.
 
 ### 1a. Equipment lists — «+ Νέα …» ✔ (2026-11-19)
 
