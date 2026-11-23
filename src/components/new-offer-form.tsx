@@ -29,8 +29,9 @@ export function NewOfferForm({
   projectId: string;
   backHref: string;
   doctorName: string;
-  projectTitle: string;
-  projectCode: string;
+  /** absent = an offer without a project */
+  projectTitle?: string;
+  projectCode?: string;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<OfferLinesStatus>({ busy: false, dirty: false, count: 0, calc: null, calcError: null });
@@ -111,8 +112,14 @@ export function NewOfferForm({
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-white/70 px-3 py-1">
               <Icon.briefcase size={14} className="text-brand-600" />
-              <span className="font-mono text-[var(--muted)]">{projectCode}</span>
-              <span className="font-semibold">{projectTitle}</span>
+              {projectId ? (
+                <>
+                  <span className="font-mono text-[var(--muted)]">{projectCode}</span>
+                  <span className="font-semibold">{projectTitle}</span>
+                </>
+              ) : (
+                <span className="text-[var(--muted)]">{el.offers.noProject}</span>
+              )}
             </span>
           </div>
         </header>

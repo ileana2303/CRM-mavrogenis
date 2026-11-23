@@ -312,6 +312,12 @@ export const el = {
   },
   offers: {
     title: "Προσφορές Πελάτη",
+    pickProject: "Νέα προσφορά · σε ποιο project;",
+    pickProjectNote: "Μια προσφορά σε project μετακινεί το project στο στάδιο «Προσφορά εστάλη».",
+    newProjectFirst: "Νέο project (και μετά η προσφορά)",
+    noProject: "Χωρίς project",
+    noProjectHint: "Προσφορά μόνο για τον πελάτη",
+    saved: "Η προσφορά αποθηκεύτηκε.",
     no: "Α/Α",
     date: "Ημερομηνία Προσφοράς",
     offerTitle: "Τίτλος Προσφοράς",
