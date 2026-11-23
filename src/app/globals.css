@@ -52,7 +52,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   /* bottom-right so it stays visible beside the content, not under it */
-  background: url("/mavrogenis.png") no-repeat right 4% bottom 5% / min(58vmin, 520px) auto;
+  background: url("/mavrogenis.png") no-repeat right 4% bottom 5% / min(44vmin, 400px) auto;
   opacity: 0.13;
 }
 
