@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Diagnostic Equipment – CRM Πωλητών",
-    short_name: "DE CRM",
+    name: "CRM-Mavrogenis SA",
+    short_name: "CRM-Mavrogenis SA",
     description: "CRM πωλητών Diagnostic Equipment",
     lang: "el",
     start_url: "/dashboard",

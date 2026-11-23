@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "DE CRM", template: "%s · DE CRM" },
+  title: { default: "CRM-Mavrogenis SA", template: "%s · CRM-Mavrogenis SA" },
   description: "Diagnostic Equipment – CRM Πωλητών",
-  applicationName: "DE CRM",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "DE CRM" },
+  applicationName: "CRM-Mavrogenis SA",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "CRM-Mavrogenis SA" },
   // iPad Safari would otherwise turn ΑΦΜ and other 9–10 digit numbers into phone links
   formatDetection: { telephone: false, address: false, email: false, date: false },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
