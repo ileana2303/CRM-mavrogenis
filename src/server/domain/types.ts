@@ -254,6 +254,7 @@ export interface OfferCalc {
 /** «Νέα προσφορά» inside a project → setData SALDOC form _CRM_ (owner, 2026-11-16) */
 export interface NewS1Offer {
   doctorId: string;
+  /** "" = an offer without a project (no PRJC) */
   projectId: string;
   comments: string;
   lines: NewS1OfferLine[];

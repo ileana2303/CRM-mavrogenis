@@ -298,7 +298,8 @@ export function projectOfferToSetData(o: NewS1Offer, series: number, salesmanId:
       {
         SERIES: series,
         TRDR: Number(o.doctorId),
-        PRJC: Number(o.projectId),
+        // no project → no PRJC: a customer-level offer (2026-11-23)
+        ...(o.projectId ? { PRJC: Number(o.projectId) } : {}),
         SALESMAN: Number(salesmanId),
         ...(o.comments ? { COMMENTS: o.comments } : {}),
       },

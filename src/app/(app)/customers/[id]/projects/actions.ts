@@ -224,7 +224,10 @@ export async function calculateProjectOfferAction(input: {
   }
 }
 
-/** «Νέα προσφορά» inside a project → setData SALDOC (offer series, PRJC, SALESMAN = session PRSN) + ITELINES. */
+/**
+ * «Νέα προσφορά» → setData SALDOC (offer series, SALESMAN = session PRSN) + ITELINES; inside a project with PRJC, from the
+ * customer's offers list possibly without one (no PRJC, no stage change, back to the offers list).
+ */
 export async function createProjectOfferAction(fd: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const doctorId = str(fd, "doctorId");
@@ -237,6 +240,10 @@ export async function createProjectOfferAction(fd: FormData): Promise<ActionResu
   } catch (e) {
     console.error("[projects] create offer failed", e);
     return { error: e instanceof Error ? e.message : String(e) };
+  }
+  if (!projectId) {
+    revalidatePath(`/customers/${doctorId}/offers`);
+    redirect(`/customers/${doctorId}/offers?saved=offer`);
   }
   // the offer exists now → the project moves to «Προσφορά εστάλη» (owner, 2026-11-16). If SoftOne refuses that, the
   // offer must NOT come back as a form error (a second «Αποθήκευση» would duplicate it): the project screen says so.
