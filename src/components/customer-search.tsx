@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { el } from "@/lib/i18n/el";
 import { Icon } from "./icons";
-import { LAST_SEARCH_COOKIE } from "@/lib/constants";
+import { LAST_SEARCH_COOKIE, TYPED_REQUEST_DEBOUNCE_MS } from "@/lib/constants";
+import { InputClearButton } from "./input-clear";
 
 interface Row {
   id: string;
@@ -15,7 +16,7 @@ interface Row {
 }
 
 /**
- * One search box that queries /api/customers/search while the user types (400 ms after the last key).
+ * One search box that queries /api/customers/search while the user types (debounced).
  * Enter still submits to /customers/results for a full page / deep link.
  */
 const CACHE_KEY = "de-crm.search";
@@ -95,7 +96,7 @@ export function CustomerSearch({ initialQ = "" }: { initialQ?: string }) {
       } finally {
         if (mine === seq.current) setBusy(false);
       }
-    }, 400);
+    }, TYPED_REQUEST_DEBOUNCE_MS);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -120,11 +121,7 @@ export function CustomerSearch({ initialQ = "" }: { initialQ?: string }) {
             enterKeyHint="search"
           />
           {busy && <span className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-brand-200 border-t-brand-600 animate-spin" aria-label={el.app.loading} />}
-          {!busy && q && (
-            <button type="button" onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 btn-ghost min-h-8 min-w-8 px-0 text-[var(--muted)]" aria-label={el.app.cancel}>
-              ✕
-            </button>
-          )}
+          {!busy && q && <InputClearButton onClick={() => setQ("")} />}
         </label>
         <p className="text-xs text-[var(--muted)]">{el.customer.searchHint}</p>
       </form>

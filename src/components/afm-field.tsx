@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { TYPED_REQUEST_DEBOUNCE_MS } from "@/lib/constants";
+import { InputClearButton } from "./input-clear";
 import { isValidAfm, normalizeAfm } from "@/lib/afm";
 import { lookupAfmAction, type AfmLookupResult } from "@/app/(app)/customers/afm-actions";
 
@@ -51,10 +53,17 @@ export function AfmField({ defaultValue = "" }: { defaultValue?: string }) {
 
   function onChange(next: string) {
     setValue(next);
-    const n = normalizeAfm(next);
-    if (n && isValidAfm(n) && n !== asked.current) lookup(n);
-    else if (!n) setResult(null);
+    if (!normalizeAfm(next)) setResult(null);
   }
+
+  // valid ΑΦΜ typed → debounced ΑΑΔΕ lookup (button still triggers immediately)
+  useEffect(() => {
+    const n = normalizeAfm(value);
+    if (!n || !isValidAfm(n) || n === asked.current) return;
+    const t = setTimeout(() => lookup(n), TYPED_REQUEST_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lookup is stable; asked tracks last run
+  }, [value]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -63,7 +72,7 @@ export function AfmField({ defaultValue = "" }: { defaultValue?: string }) {
           <input
             ref={input}
             name="afm"
-            className="input pr-10"
+            className="input pr-10 min-w-0"
             inputMode="numeric"
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -75,6 +84,15 @@ export function AfmField({ defaultValue = "" }: { defaultValue?: string }) {
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center" aria-hidden>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
             </span>
+          )}
+          {!looking && value && (
+            <InputClearButton
+              onClick={() => {
+                setValue("");
+                setResult(null);
+                asked.current = "";
+              }}
+            />
           )}
         </div>
         <button

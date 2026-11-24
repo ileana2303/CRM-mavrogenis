@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "re
 import { Icon } from "./icons";
 import { Modal } from "./modal";
 import { el } from "@/lib/i18n/el";
+import { InputClearButton } from "./input-clear";
 
 export interface SelectOption {
   value: string;
@@ -177,9 +178,10 @@ export function Select({ options, name, defaultValue, value, onChange, placehold
                 onKeyDown={onKeyDown}
                 placeholder={el.app.search + "…"}
                 autoFocus
-                className="input pl-10"
+                className="input pl-10 pr-10"
                 aria-controls={`${id}-list`}
               />
+              {query && <InputClearButton onClick={() => { setQuery(""); setActive(0); search.current?.focus(); }} />}
             </div>
           </div>
         )}

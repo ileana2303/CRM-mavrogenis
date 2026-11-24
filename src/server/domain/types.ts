@@ -403,6 +403,61 @@ export interface TimelineEntry {
   amountBasis?: "NET" | "TOTAL";
 }
 
+/** `api.crm.projects/search` — CRM action vs sales document (CRM_TIMELINE). */
+export type TimelineSearchUnit = "emporiko" | "crm";
+
+export interface TimelineSearchLineItem {
+  linenum: number;
+  mtrl?: number;
+  itemCode: string;
+  itemName: string;
+  itemDescription?: string;
+  qty: number;
+  price: number;
+  lineval: number;
+}
+
+/** One row from timeline search (list or detail). Amounts are parsed numbers. */
+export interface TimelineSearchHit {
+  unit: TimelineSearchUnit;
+  id: string;
+  findoc?: string;
+  soaction?: string;
+  trdr: string;
+  trdrCode?: string;
+  trdrName?: string;
+  prjc?: string;
+  prjcCode?: string;
+  prjcName?: string;
+  category?: string;
+  typeName?: string;
+  seriesName?: string;
+  /** ISO instant */
+  at: string;
+  code: string;
+  prjAmount?: number;
+  docTotal?: number;
+  salesman?: string;
+  salesmanName?: string;
+  comments?: string;
+  remarks?: string;
+  actStatus?: number;
+  actStatusName?: string;
+  actStage?: string;
+  fromDate?: string;
+  finalDate?: string;
+  /** emporiko icon code 1–5 */
+  image?: string;
+  items?: TimelineSearchLineItem[];
+}
+
+export interface TimelineSearchPage {
+  rows: TimelineSearchHit[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
 /** A salesperson an action can be assigned to (ACTPRSN) – api.crm/bootstrap `prsns` (2026-11-23) */
 export interface Salesperson {
   id: string;

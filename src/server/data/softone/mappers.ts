@@ -3,7 +3,7 @@
  * Rows come with lowercase/camelCase SoftOne column names as produced by the scripts.
  */
 import { S1Error } from "./client";
-import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NewCallLog, NextActionKind, ActionKind, TimelineEntry, TimelineKind, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
+import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NewCallLog, NextActionKind, ActionKind, TimelineEntry, TimelineKind, TimelineSearchHit, TimelineSearchLineItem, TimelineSearchUnit, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
 import { athensToIso } from "../../../lib/athens";
 
 export interface S1CustomerRow {
@@ -631,6 +631,76 @@ export function rowToDocTimelineEntry(r: S1TimelineRow, amountBasis: "NET" | "TO
     at,
     comments: pickCol(r, "comments") ?? "",
     ...(Number.isFinite(amount) && amount !== 0 ? { amount, amountBasis } : {}),
+  };
+}
+
+/** Row of api.crm.projects/search (CRM_TIMELINE, 2026-11-23). */
+export type S1TimelineSearchRow = Record<string, unknown>;
+
+function numOrUndef(v: unknown): number | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function mapSearchItem(r: Record<string, unknown>): TimelineSearchLineItem {
+  return {
+    linenum: Number(pickCol(r, "linenum") ?? 0),
+    mtrl: numOrUndef(pickCol(r, "mtrl")),
+    itemCode: pickCol(r, "itemCode", "itemcode") ?? "",
+    itemName: pickCol(r, "itemName", "itemname") ?? "",
+    itemDescription: pickCol(r, "itemDescription", "itemdescription"),
+    qty: Number(pickCol(r, "qty") ?? 0),
+    price: Number(pickCol(r, "price") ?? 0),
+    lineval: Number(pickCol(r, "lineval") ?? 0),
+  };
+}
+
+export function rowToTimelineSearchHit(r: S1TimelineSearchRow): TimelineSearchHit {
+  const unitRaw = pickCol(r, "unit")?.toLowerCase();
+  const unit: TimelineSearchUnit = unitRaw === "crm" ? "crm" : "emporiko";
+  const id = pickCol(r, "id") ?? "";
+  const at = s1DateTimeToIso(pickCol(r, "trndate"));
+  if (!id || !at) throw new S1Error(`search: row without id/trndate: ${JSON.stringify(r).slice(0, 200)}`);
+  const trdr = pickCol(r, "trdr") ?? "";
+  if (!trdr) throw new S1Error(`search: row without trdr: ${JSON.stringify(r).slice(0, 200)}`);
+  const findoc = pickCol(r, "findoc");
+  const soaction = pickCol(r, "soaction");
+  const rawItems = r.items;
+  const items =
+    Array.isArray(rawItems) && rawItems.length > 0
+      ? (rawItems as Record<string, unknown>[]).map(mapSearchItem)
+      : undefined;
+  const actSt = pickCol(r, "actStatus", "actstatus");
+  return {
+    unit,
+    id,
+    ...(findoc ? { findoc } : {}),
+    ...(soaction ? { soaction } : {}),
+    trdr,
+    trdrCode: pickCol(r, "trdrCode", "trdrcode"),
+    trdrName: pickCol(r, "trdrName", "trdrname"),
+    prjc: pickCol(r, "prjc"),
+    prjcCode: pickCol(r, "prjcCode", "prjccode"),
+    prjcName: pickCol(r, "prjcName", "prjcname"),
+    category: pickCol(r, "category"),
+    typeName: pickCol(r, "typeName", "typename"),
+    seriesName: pickCol(r, "seriesName", "seriesname"),
+    at,
+    code: pickCol(r, "code") ?? "",
+    prjAmount: numOrUndef(pickCol(r, "prjAmount", "prjamount")),
+    docTotal: numOrUndef(pickCol(r, "docTotal", "doctotal")),
+    salesman: pickCol(r, "salesman"),
+    salesmanName: pickCol(r, "salesmanName", "salesmanname"),
+    comments: pickCol(r, "comments"),
+    remarks: pickCol(r, "remarks"),
+    actStatus: actSt !== undefined ? Number(actSt) : undefined,
+    actStatusName: pickCol(r, "actStatusName", "actstatusname"),
+    actStage: pickCol(r, "actStage", "actstage"),
+    fromDate: pickCol(r, "fromDate", "fromdate"),
+    finalDate: pickCol(r, "finalDate", "finaldate"),
+    image: pickCol(r, "image"),
+    ...(items ? { items } : {}),
   };
 }
 

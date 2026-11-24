@@ -7,9 +7,9 @@
 import { redirect } from "next/navigation";
 import { getSession } from "../../auth/session";
 import type { CheckIn, Doctor, MachineCatalog, MachineListKind, MachineRef, Salesperson, ProjectSummary, Task, User } from "../../domain/types";
-import type { DataProvider, DoctorSearch } from "../provider";
+import type { DataProvider, DoctorSearch, TimelineSearchQuery } from "../provider";
 import { S1Client, S1Error, s1ConfigFromEnv } from "./client";
-import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, ACTION_OBJECT, nextActionToSetData, callLogToSetData, rowToTimelineEntry, rowToDocTimelineEntry, type S1TimelineRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
+import { CRM_FORM, arrivalToSetData, departureToSetData, doctorToSetData, rowToCheckIn, rowToConsent, rowToTask, taskPatchToSetData, taskToSetData, NEXT_ACTION_OBJECT, ACTION_OBJECT, nextActionToSetData, callLogToSetData, rowToTimelineEntry, rowToDocTimelineEntry, rowToTimelineSearchHit, type S1TimelineRow, type S1TimelineSearchRow, type S1PendingArrivalRow, type S1PendingRow, doctorUpdateDelta, rowToDoctor, rowToEquipment, rowToHospital, machinesToSetData, rowToOffer, rowToProduct, type S1CustomerRow, type S1HospitalRow, type S1ProjectRow, rowToProjectSummary, projectToSetData, prjcToDetail, projectOfferToSetData, calcToOffer, type S1OfferRow, type S1ProductRow, dashboardToReport, type S1DashboardResponse } from "./mappers";
 
 class NotImplemented extends Error {
   constructor(what: string) {
@@ -263,6 +263,27 @@ export const softOneProvider: DataProvider = {
       const res = await js<S1TimelineRow[]>("api.crm.projects", "getTimeline", { prjc: Number(projectId) });
       // AMNT here is the net value; the customer timeline sends the total
       return (res.data ?? []).map((r) => rowToDocTimelineEntry(r, "NET"));
+    },
+    async search(params: TimelineSearchQuery) {
+      const body: Record<string, unknown> = {
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 30,
+        withItems: params.withItems ?? false,
+      };
+      if (params.q1?.trim()) body.q1 = params.q1.trim();
+      if (params.q2?.trim()) body.q2 = params.q2.trim();
+      if (params.dateFrom?.trim()) body.dateFrom = params.dateFrom.trim();
+      if (params.dateTo?.trim()) body.dateTo = params.dateTo.trim();
+      if (params.findoc !== undefined) body.findoc = params.findoc;
+      if (params.unit) body.unit = params.unit;
+      const res = await js<S1TimelineSearchRow[]>("api.crm.projects", "search", body);
+      const rows = (res.data ?? []).map(rowToTimelineSearchHit);
+      return {
+        rows,
+        page: Number(res.page ?? params.page ?? 1),
+        pageSize: Number(res.pageSize ?? params.pageSize ?? 30),
+        totalCount: Number(res.totalCount ?? rows.length),
+      };
     },
     listByUser: todo("projects.listByUser"),
     listAll: todo("projects.listAll"),

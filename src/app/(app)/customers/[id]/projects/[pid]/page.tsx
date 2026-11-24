@@ -11,6 +11,7 @@ import { getProjectDetail, projectLookups } from "@/server/services/project-serv
 import { TimelineButton } from "@/components/timeline-button";
 import { Icon } from "@/components/icons";
 import { SOON } from "@/lib/features";
+import { safeDashboardBackHref } from "@/lib/timeline-search-return";
 import { ComingSoon } from "@/components/coming-soon";
 
 export const metadata = { title: el.projects.view };
@@ -24,10 +25,11 @@ export default async function ProjectViewPage({
   searchParams,
 }: {
   params: Promise<{ id: string; pid: string }>;
-  searchParams: Promise<{ saved?: string; stage?: string; task?: string }>;
+  searchParams: Promise<{ saved?: string; stage?: string; task?: string; back?: string }>;
 }) {
   const { id, pid } = await params;
-  const { saved, stage, task } = await searchParams;
+  const { saved, stage, task, back } = await searchParams;
+  const backHref = safeDashboardBackHref(back) ?? `/customers/${id}/projects`;
   if (SOON.projectDetail) return <ComingSoon title={metadata.title} backHref={`/customers/${id}/projects`} />;
   const [doctor, project, lookups] = await Promise.all([getDoctor(id), getProjectDetail(pid), projectLookups()]);
   if (!doctor || !project || project.doctorId !== id) notFound();
@@ -42,7 +44,7 @@ export default async function ProjectViewPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <BackLink href={`/customers/${id}/projects`} />
+      <BackLink href={backHref} />
       <PageTitle
         right={
           <div className="flex items-center gap-3">

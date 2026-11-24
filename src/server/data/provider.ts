@@ -31,6 +31,8 @@ import type {
   NewCallLog,
   ActionKind,
   TimelineEntry,
+  TimelineSearchPage,
+  TimelineSearchUnit,
   MachineListKind,
   Salesperson,
   MachineRef,
@@ -50,6 +52,22 @@ export interface DoctorSearch {
 export interface DateRange {
   from: string; // YYYY-MM-DD inclusive
   to: string; // YYYY-MM-DD inclusive
+}
+
+/** `api.crm.projects/search` — all filters optional and AND-combined. */
+export interface TimelineSearchQuery {
+  q1?: string;
+  q2?: string;
+  /** YYYY-MM-DD — same as dashboard Φίλτρα (`from` / `to` URL params) */
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+  withItems?: boolean;
+  findoc?: number;
+  /** CRM detail: filter by SOACTION id when findoc is absent */
+  id?: number;
+  unit?: TimelineSearchUnit;
 }
 
 export type NewEntity<T> = Omit<T, "id">;
@@ -90,6 +108,8 @@ export interface ProjectsRepo {
   summariesByDoctor(doctorId: string): Promise<ProjectSummary[]>;
   /** api.crm.projects/getTimeline {prjc}: actions and offers on the project, newest first */
   timeline(projectId: string): Promise<TimelineEntry[]>;
+  /** api.crm.projects/search — unified CRM + sales timeline (CRM_TIMELINE) */
+  search(params: TimelineSearchQuery): Promise<TimelineSearchPage>;
   /** setData PRJC (form _CRM_) → the new PRJC id */
   createForDoctor(p: NewS1Project, salesmanId?: string): Promise<{ id: string }>;
   /** getData PRJC form _CRM_ key = prjc; null when SoftOne has no such project */

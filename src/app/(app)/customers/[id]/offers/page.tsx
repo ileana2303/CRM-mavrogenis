@@ -12,12 +12,14 @@ import { listProjectSummaries } from "@/server/services/project-service";
 import { NewOfferButton } from "@/components/new-offer-button";
 import { SOON } from "@/lib/features";
 import { setOfferClosedAction } from "../../actions";
+import { safeDashboardBackHref } from "@/lib/timeline-search-return";
 
 export const metadata = { title: el.offers.title };
 
-export default async function OffersPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; task?: string }> }) {
+export default async function OffersPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; task?: string; back?: string }> }) {
   const { id } = await params;
-  const { saved, task } = await searchParams;
+  const { saved, task, back } = await searchParams;
+  const backHref = safeDashboardBackHref(back) ?? `/customers/${id}`;
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const [offers, projects] = await Promise.all([listOffersForDoctor(id), SOON.projectOffer ? [] : listProjectSummaries(id)]);
@@ -26,7 +28,7 @@ export default async function OffersPage({ params, searchParams }: { params: Pro
 
   return (
     <div className="flex flex-col gap-4">
-      <BackLink href={`/customers/${id}`} />
+      <BackLink href={backHref} />
       <PageTitle right={SOON.projectOffer ? null : <NewOfferButton doctorId={id} projects={projectOptions} />}>{el.offers.title}</PageTitle>
       <DoctorLine name={doctorFullName(doctor)} />
       {saved === "offer" && <Notice tone="green">{el.offers.saved}</Notice>}

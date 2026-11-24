@@ -59,8 +59,10 @@ export const el = {
     hidePassword: "Απόκρυψη κωδικού",
     submit: "Σύνδεση",
     error: "Λάθος όνομα χρήστη ή κωδικός.",
-    noRole: "Ο χρήστης συνδέθηκε στο SoftOne αλλά δεν έχει ρόλο CRM (δεν συνδέεται με πρόσωπο/ρόλο). Επικοινωνήστε με τον διαχειριστή.",
-    unavailable: "Το SoftOne δεν είναι διαθέσιμο αυτή τη στιγμή. Δοκιμάστε ξανά.",
+    noRole:
+      "Ο χρήστης συνδέθηκε στο SoftOne αλλά δεν έχει ρόλο CRM (δεν συνδέεται με πρόσωπο/ρόλο). Επικοινωνήστε με τον διαχειριστή.",
+    unavailable:
+      "Το SoftOne δεν είναι διαθέσιμο αυτή τη στιγμή. Δοκιμάστε ξανά.",
     expired: "Η σύνδεση με το SoftOne έληξε. Συνδεθείτε ξανά.",
     hintSoftOne: "Σύνδεση με τον λογαριασμό σας στο SoftOne.",
   },
@@ -76,6 +78,42 @@ export const el = {
     apply: "Εφαρμογή",
     empty: "Καμία εγγραφή για την περίοδο.",
     salespersonFilter: "Πωλητής",
+  },
+  timelineSearch: {
+    title: "Αναζήτηση χρονολογίου",
+    q1Label: "Πελάτης / Έργο / Παραστατικό",
+    q1Placeholder: "Όνομα, κωδικός, ΑΦΜ, project…",
+    q2Label: "Είδος",
+    q2Placeholder: "Κωδικός ή όνομα είδους...",
+    resultsTitle: "Αποτελέσματα αναζήτησης",
+    viewResults: "Προβολή αποτελεσμάτων",
+    viewResultsShort: "Αποτελέσματα",
+    resultsCount: (shown: number, total: number) =>
+      total > shown
+        ? `${shown} από ${total}`
+        : total === 1
+          ? "1 αποτέλεσμα"
+          : `${total} αποτελέσματα`,
+    empty: "Κανένα αποτέλεσμα.",
+    loadMore: "Φόρτωσε περισσότερα",
+    more: "περισσότερα",
+    detailError: "Δεν φορτώθηκαν οι λεπτομέρειες",
+    openCustomer: "Καρτέλα πελάτη",
+    openProject: "Project",
+    openOffers: "Προσφορές",
+    items: "Είδη",
+    itemCode: "Κωδικός",
+    itemName: "Περιγραφή",
+    qty: "Ποσ.",
+    price: "Τιμή",
+    lineval: "Αξία",
+    salesman: "Πωλητής",
+    stage: "Στάδιο",
+    status: "Κατάσταση",
+    from: "Έναρξη",
+    until: "Λήξη",
+    total: "Σύνολο",
+    project: "Έργο",
   },
   filters: {
     title: "Φίλτρα",
@@ -183,7 +221,8 @@ export const el = {
     notInSoftOne: "Δεν υπάρχει στη λίστα του SoftOne",
     machines: "μηχανήματα",
     machine: "μηχάνημα",
-    catalogEmpty: "Οι λίστες κατηγοριών / εταιρειών / μοντέλων δεν φορτώθηκαν από το SoftOne.",
+    catalogEmpty:
+      "Οι λίστες κατηγοριών / εταιρειών / μοντέλων δεν φορτώθηκαν από το SoftOne.",
     newCategory: "Νέα κατηγορία",
     newMark: "Νέα εταιρεία",
     newModel: "Νέο μοντέλο",
@@ -201,7 +240,8 @@ export const el = {
     commentPlaceholder: "Πχ. Ενδιαφέρεται για OCT αλλά όχι αυτή την στιγμή",
     dictate: "Φωνητική υπαγόρευση",
     dictating: "Ακούω… πατήστε για διακοπή",
-    dictateUnsupported: "Η φωνητική υπαγόρευση δεν είναι διαθέσιμη. Σε iPad: Ρυθμίσεις › Γενικά › Πληκτρολόγιο › Ενεργοποίηση υπαγόρευσης, και άδεια μικροφώνου για το Safari.",
+    dictateUnsupported:
+      "Η φωνητική υπαγόρευση δεν είναι διαθέσιμη. Σε iPad: Ρυθμίσεις › Γενικά › Πληκτρολόγιο › Ενεργοποίηση υπαγόρευσης, και άδεια μικροφώνου για το Safari.",
     dictateInsecure: "Η φωνητική υπαγόρευση απαιτεί σύνδεση HTTPS.",
     newProject: "+ Νέο Project",
     recent: "Πρόσφατες επισκέψεις",
@@ -252,11 +292,13 @@ export const el = {
     calculating: "Υπολογισμός…",
     waitCalc: "Περιμένετε να ολοκληρώσει το SoftOne τον υπολογισμό",
     leaveTitle: "Έξοδος χωρίς αποθήκευση;",
-    leaveMessage: "Η προσφορά δεν έχει αποθηκευτεί. Αν φύγετε, ό,τι έχετε συμπληρώσει θα χαθεί.",
+    leaveMessage:
+      "Η προσφορά δεν έχει αποθηκευτεί. Αν φύγετε, ό,τι έχετε συμπληρώσει θα χαθεί.",
     leaveConfirm: "Έξοδος",
     leaveStay: "Συνέχεια επεξεργασίας",
     offerSaved: "Η προσφορά καταχωρήθηκε στο SoftOne.",
-    offerStageFailed: "Το στάδιο του project δεν άλλαξε σε «Προσφορά εστάλη» – αλλάξτε το παρακάτω (η προσφορά έχει ήδη καταχωρηθεί).",
+    offerStageFailed:
+      "Το στάδιο του project δεν άλλαξε σε «Προσφορά εστάλη» – αλλάξτε το παρακάτω (η προσφορά έχει ήδη καταχωρηθεί).",
     stateSaved: "Το στάδιο ενημερώθηκε.",
     notesField: "Παρατηρήσεις",
     requiredError: "Συμπληρώστε τίτλο, τύπο και στάδιο.",
@@ -293,10 +335,12 @@ export const el = {
     newPrice: "Νέα Τιμή",
     notes: "1. Παρατηρήσεις",
     reason: "2. Αιτιολογία αναθεώρησης",
-    reasonPlaceholder: "Πχ. Του έκανε προσφορά ο ανταγωνισμός 1.000€ πιο χαμηλά από ότι εμείς",
+    reasonPlaceholder:
+      "Πχ. Του έκανε προσφορά ο ανταγωνισμός 1.000€ πιο χαμηλά από ότι εμείς",
     reasonRequired: "Η αιτιολογία αναθεώρησης είναι υποχρεωτική.",
     offer: "Προσφορά",
-    noOffer: "Δεν υπάρχει προσφορά προς αναθεώρηση. Κάντε πρώτα Αίτημα Προσφοράς.",
+    noOffer:
+      "Δεν υπάρχει προσφορά προς αναθεώρηση. Κάντε πρώτα Αίτημα Προσφοράς.",
   },
   close: {
     title: "Κλείσιμο Project",
@@ -313,7 +357,8 @@ export const el = {
   offers: {
     title: "Προσφορές Πελάτη",
     pickProject: "Νέα προσφορά · σε ποιο project;",
-    pickProjectNote: "Μια προσφορά σε project μετακινεί το project στο στάδιο «Προσφορά εστάλη».",
+    pickProjectNote:
+      "Μια προσφορά σε project μετακινεί το project στο στάδιο «Προσφορά εστάλη».",
     newProjectFirst: "Νέο project (και μετά η προσφορά)",
     noProject: "Χωρίς project",
     noProjectHint: "Προσφορά μόνο για τον πελάτη",
@@ -366,15 +411,19 @@ export const el = {
     nextMeeting: "Συνάντηση",
     nextOffer: "Προσφορά",
     nextOfferProject: "Η προσφορά ανήκει σε",
-    nextOfferNote: "Ανοίγει η φόρμα προσφοράς. Η εκκρεμότητα κλείνει μόλις αποθηκευτεί η προσφορά – αν δεν την αποθηκεύσετε, μένει ανοιχτή.",
+    nextOfferNote:
+      "Ανοίγει η φόρμα προσφοράς. Η εκκρεμότητα κλείνει μόλις αποθηκευτεί η προσφορά – αν δεν την αποθηκεύσετε, μένει ανοιχτή.",
     nextOfferGo: "Συνέχεια στην προσφορά",
-    fromTaskNote: "Μόλις αποθηκευτεί η προσφορά, κλείνει και η εκκρεμότητα από την οποία ξεκίνησε.",
-    taskCloseFailed: "Η προσφορά αποθηκεύτηκε, αλλά η εκκρεμότητα δεν έκλεισε – κλείστε την από τις Εκκρεμότητες.",
+    fromTaskNote:
+      "Μόλις αποθηκευτεί η προσφορά, κλείνει και η εκκρεμότητα από την οποία ξεκίνησε.",
+    taskCloseFailed:
+      "Η προσφορά αποθηκεύτηκε, αλλά η εκκρεμότητα δεν έκλεισε – κλείστε την από τις Εκκρεμότητες.",
     nextDate: "Ημερομηνία",
     nextTime: "Ώρα",
     nextComments: "Σχόλια",
     nextSave: "Ολοκλήρωση & δημιουργία",
-    nextNote: "Η εκκρεμότητα κλείνει μόλις το SoftOne αποθηκεύσει την επόμενη ενέργεια.",
+    nextNote:
+      "Η εκκρεμότητα κλείνει μόλις το SoftOne αποθηκεύσει την επόμενη ενέργεια.",
     nextKindMissing: "Επιλέξτε τύπο ενέργειας.",
     nextWhenMissing: "Συμπληρώστε ημερομηνία και ώρα.",
     add: "+ Νέα εκκρεμότητα",
@@ -402,13 +451,15 @@ export const el = {
     saved: "Η επίσκεψη αποθηκεύτηκε.",
   },
   callLog: {
-    prompt: (when: string) => `Κάλεσες τον πελάτη στις ${when}. Θέλεις να καταγράψεις την κλήση;`,
+    prompt: (when: string) =>
+      `Κάλεσες τον πελάτη στις ${when}. Θέλεις να καταγράψεις την κλήση;`,
     open: "Καταγραφή κλήσης",
     title: "Καταγραφή κλήσης",
     dismiss: "Όχι τώρα",
     when: "Ώρα κλήσης",
     comments: "Τι ειπώθηκε",
-    commentsPlaceholder: "π.χ. Ενδιαφέρεται για OCT, θέλει προσφορά έως Παρασκευή",
+    commentsPlaceholder:
+      "π.χ. Ενδιαφέρεται για OCT, θέλει προσφορά έως Παρασκευή",
     commentsMissing: "Γράψτε τι ειπώθηκε στην κλήση.",
     next: "Επόμενη ενέργεια",
     nextNone: "Καμία",
@@ -433,8 +484,23 @@ export const el = {
     empty: "Δεν υπάρχουν ενέργειες ακόμη.",
     error: "Το SoftOne δεν επέστρεψε το χρονολόγιο",
     amountBasis: { NET: "Καθαρή αξία", TOTAL: "Σύνολο" },
-    kinds: { TASK: "Εκκρεμότητα", CALL: "Τηλέφωνο", EMAIL: "Email", MEETING: "Συνάντηση", OFFER: "Προσφορά", OTHER: "Ενέργεια" },
-    actStatus: ["Αδιάφορο", "Προς έναρξη", "Σε εξέλιξη", "Ολοκληρώθηκε", "Ακυρώθηκε", "Σε αναμονή", "Σε αναβολή"] as string[],
+    kinds: {
+      TASK: "Εκκρεμότητα",
+      CALL: "Τηλέφωνο",
+      EMAIL: "Email",
+      MEETING: "Συνάντηση",
+      OFFER: "Προσφορά",
+      OTHER: "Ενέργεια",
+    },
+    actStatus: [
+      "Αδιάφορο",
+      "Προς έναρξη",
+      "Σε εξέλιξη",
+      "Ολοκληρώθηκε",
+      "Ακυρώθηκε",
+      "Σε αναμονή",
+      "Σε αναβολή",
+    ] as string[],
   },
   kpis: {
     title: "KPIs / Απόδοση Πωλήσεων",
@@ -485,9 +551,18 @@ export const el = {
     answeredOk: "Η προσφορά επιστράφηκε στον πωλητή.",
   },
   enums: {
-    role: { SALESPERSON: "Πωλητής", MANAGER: "Προϊστάμενος Πωλήσεων", SUPPORT: "Τμήμα Υποστήριξης" },
+    role: {
+      SALESPERSON: "Πωλητής",
+      MANAGER: "Προϊστάμενος Πωλήσεων",
+      SUPPORT: "Τμήμα Υποστήριξης",
+    },
     activityType: { PRIVATE: "Ιδιώτης", PUBLIC: "Δημόσιος Ιατρός" },
-    rank: { RESIDENT: "Ειδικευόμενος", CURATOR: "Επιμελητής", DIRECTOR: "Διευθυντής", PROFESSOR: "Καθηγητής" },
+    rank: {
+      RESIDENT: "Ειδικευόμενος",
+      CURATOR: "Επιμελητής",
+      DIRECTOR: "Διευθυντής",
+      PROFESSOR: "Καθηγητής",
+    },
     equipmentCategory: {
       OCT: "OCT",
       PERIMETER: "Περίμετρο",
@@ -500,8 +575,17 @@ export const el = {
       MICROSCOPE: "Μικροσκόπιο",
       OTHER: "Άλλο",
     },
-    visitContactMethod: { VISIT: "Επίσκεψη", PHONE: "Τηλέφωνο", EMAIL: "Email" },
-    visitTopic: { GENERAL: "Γενική ενημέρωση", EQUIPMENT: "Εξοπλισμός", PROJECT: "Project", OFFER: "Προσφορά" },
+    visitContactMethod: {
+      VISIT: "Επίσκεψη",
+      PHONE: "Τηλέφωνο",
+      EMAIL: "Email",
+    },
+    visitTopic: {
+      GENERAL: "Γενική ενημέρωση",
+      EQUIPMENT: "Εξοπλισμός",
+      PROJECT: "Project",
+      OFFER: "Προσφορά",
+    },
     visitOutcome: {
       NONE: "Καμία",
       CONTACT: "Επικοινωνία",
@@ -524,8 +608,18 @@ export const el = {
       PARTIAL: "Μερικώς κερδισμένο",
     },
     projectStatus: { ACTIVE: "Σε εξέλιξη", CLOSED: "Ολοκληρώθηκε" },
-    followUpContactMethod: { PHONE: "Τηλέφωνο", VISIT: "Επίσκεψη", EMAIL: "Email", ONLINE: "Online" },
-    followUpResult: { POSITIVE: "Θετικό", NEGATIVE: "Αρνητικό", WAITING: "Αναμονή", NO_ANSWER: "Δεν απάντησε" },
+    followUpContactMethod: {
+      PHONE: "Τηλέφωνο",
+      VISIT: "Επίσκεψη",
+      EMAIL: "Email",
+      ONLINE: "Online",
+    },
+    followUpResult: {
+      POSITIVE: "Θετικό",
+      NEGATIVE: "Αρνητικό",
+      WAITING: "Αναμονή",
+      NO_ANSWER: "Δεν απάντησε",
+    },
     nextAction: {
       FOLLOWUP: "Νέο Follow-up",
       DEMO: "Demo",
@@ -533,7 +627,11 @@ export const el = {
       OTHER: "Άλλο",
       NONE: "Καμία",
     },
-    offerStatus: { REQUESTED: "Αίτημα", PRICED: "Τιμολογήθηκε", SENT: "Στάλθηκε" },
+    offerStatus: {
+      REQUESTED: "Αίτημα",
+      PRICED: "Τιμολογήθηκε",
+      SENT: "Στάλθηκε",
+    },
     offerClosed: { YES: "Ναι", NO: "Όχι", PARTIAL: "Μερικώς" },
     eventType: {
       CREATED: "Δημιουργία Project",

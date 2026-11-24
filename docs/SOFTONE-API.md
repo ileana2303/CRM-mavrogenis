@@ -222,6 +222,27 @@ newest first: the project's actions (unit crm, sosource 2021) and offers (unit e
 soredir seen: 1 call, 2 meeting, 3 task (email not seen yet → shown with SoftOne's `fprms` name and a neutral icon).
 Opened by the «Χρονολόγιο» button next to the stage badge on the project screen (modal, loaded on open).
 
+### 8c-search. Timeline search ✔ — `api.crm.projects/search` (2026-11-23)
+
+Reads denormalised rows from **CRM_TIMELINE** (refreshed about every 15 minutes). Returns CRM actions (`unit: "crm"`) and
+sales documents (`unit: "emporiko"`) in one list, **newest first**, with optional paging.
+
+| param | notes |
+| --- | --- |
+| `q1` / `q` | free text on header fields (customer, project, seller, doc code, comments, remarks); each word separate; greeklish on q1 |
+| `q2` | item code/name/CRM description — all words must match one line; **documents only** |
+| `dateFrom` / `dateTo` | `YYYY-MM-DD` (inclusive `dateTo`) |
+| `trdr`, `seller`, `prjc`, `findoc` | id or comma list |
+| `unit` | `emporiko` \| `crm` |
+| `category` | exact Greek label (e.g. `Προσφορά`) |
+| `withItems` | default true; **false** for fast list (no `items[]`) |
+| `page`, `pageSize` | default 1 / 50, max pageSize 200 |
+
+Envelope: `{ success, page, pageSize, totalCount, data: [row, …] }`. Header money fields are **strings**; line `items` use numbers.
+Row keys include `id`, `findoc?`, `soaction?`, `trdr`, `trdrName`, `category`, `typeName`, `trndate`, `code`, `docTotal`, `remarks`, `image` (1–5 on documents), and CRM-only `actStatusName`, `fromDate`, `finalDate`. React list key: `` `${unit}-${id}` ``.
+
+Used on **Αναφορά Ημέρας** (`/dashboard`): list with `withItems: false`; document detail reloads with `findoc` + `withItems: true`.
+
 ### 8d. Customer timeline ✔ — `api.crm.customers/getTimeline` (2026-11-19)
 
 `{ trdr }` → `data: [{ COMPANY, OBJTYPE ("1" document / "2" action), ID, SOREDIR, SOSOURCE, TFPRMS, TRNDATE, CODE, COMMENTS?, AMNT,

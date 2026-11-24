@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Icon } from "./icons";
 import { Modal } from "./modal";
 import { fmtEur } from "@/lib/format";
+import { TYPED_REQUEST_DEBOUNCE_MS } from "@/lib/constants";
 import { cleanNumberInput, formatGr, parseGr } from "@/lib/gr-number";
+import { InputClearButton } from "./input-clear";
 import type { OfferCalc, ProductHit } from "@/server/domain/types";
 import { calculateProjectOfferAction, searchProductsAction } from "@/app/(app)/customers/[id]/projects/actions";
 
@@ -139,7 +141,7 @@ export function OfferLinesEditor({
           });
         });
       });
-    }, 400);
+    }, TYPED_REQUEST_DEBOUNCE_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, doctorId, projectId]);
@@ -341,7 +343,7 @@ function ProductSearch({ onPick, autoOpen }: { onPick: (p: ProductHit) => void; 
           setActive(0);
         }
       });
-    }, 300);
+    }, TYPED_REQUEST_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [q]);
 
@@ -416,6 +418,7 @@ function ProductSearch({ onPick, autoOpen }: { onPick: (p: ProductHit) => void; 
                 <span className="size-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
               </span>
             )}
+            {!pending && q && <InputClearButton onClick={() => setQ("")} />}
           </div>
         </div>
         <div ref={list} role="listbox" className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-[var(--line)] py-1">

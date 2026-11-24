@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Card, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { Select } from "@/components/select";
@@ -9,6 +10,8 @@ import type { DailyReportItem } from "@/server/domain/types";
 import { listSalespeople } from "@/server/services/auth-service";
 import { dailyReport, defaultRange } from "@/server/services/dashboard-service";
 import { MyDayLists } from "@/components/my-day-lists";
+import { TimelineSearch } from "@/components/timeline-search";
+import { TimelineFilterHiddenParams } from "@/components/timeline-filter-hidden-params";
 
 export const metadata = { title: el.daily.title };
 
@@ -36,6 +39,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <PageTitle
         right={
           <FilterDialog summary={[`${fmtDate(range.from)} – ${fmtDate(range.to)}`, salesperson].filter(Boolean).join(" · ")}>
+            <Suspense fallback={null}>
+              <TimelineFilterHiddenParams />
+            </Suspense>
             <DateRangeFields from={range.from} to={range.to} />
             {session.role === "MANAGER" && (
               <label className="block">
@@ -52,6 +58,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* actionable list = the logged-in salesperson's own items (getPendings uses the session prsn); a manager looking
           at someone else's report gets the read-only cards only */}
       {ownDay && <MyDayLists session={session} back={`/dashboard${qs}`} />}
+
+      <Suspense fallback={null}>
+        <TimelineSearch filterFrom={range.from} filterTo={range.to} />
+      </Suspense>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Section title={el.daily.appointments} items={report.appointments} tone="blue" />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { LAST_SEARCH_COOKIE } from "@/lib/constants";
+import { safeDashboardBackHref } from "@/lib/timeline-search-return";
 import { BackLink, Badge, Notice, PageTitle } from "@/components/ui";
 import { CheckInButtons } from "@/components/check-in-buttons";
 import { el } from "@/lib/i18n/el";
@@ -18,13 +19,14 @@ import { PhoneWithCallLog } from "@/components/call-log";
 
 export const metadata = { title: el.hub.title };
 
-export default async function HubPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
+export default async function HubPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; back?: string }> }) {
   const session = await requireUser();
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, back } = await searchParams;
+  const fromTimeline = safeDashboardBackHref(back);
   // «Πίσω» goes up to the customer list, reopening the last search (cookie) when there is one
   const lastQ = (await cookies()).get(LAST_SEARCH_COOKIE)?.value ?? "";
-  const backHref = lastQ ? `/customers?q=${encodeURIComponent(lastQ)}` : "/customers";
+  const backHref = fromTimeline ?? (lastQ ? `/customers?q=${encodeURIComponent(lastQ)}` : "/customers");
   const doctor = await getDoctor(id);
   if (!doctor) notFound();
   const [consent, openRes, pending, projects] = await Promise.all([
