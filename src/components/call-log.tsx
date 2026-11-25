@@ -10,6 +10,7 @@ import { Icon } from "./icons";
 import { Modal } from "./modal";
 import { Field } from "./ui";
 import { NextActionFields } from "./next-action-fields";
+import { TrnDateField } from "./trn-date-field";
 
 /** a tap on the number is remembered for this long – long enough for a real call, short enough not to nag tomorrow */
 const WINDOW_MS = 3 * 60 * 60 * 1000;
@@ -112,6 +113,7 @@ export function PhoneWithCallLog({ doctorId, phone, action }: { doctorId: string
         <ActionForm action={action} className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-2 text-left">
           <input type="hidden" name="doctorId" value={doctorId} />
           <CallTime defaultAt={callAt} />
+          <TrnDateField />
 
           <Field label={el.callLog.comments} required>
             <DictationTextarea name="comments" rows={4} placeholder={el.callLog.commentsPlaceholder} />

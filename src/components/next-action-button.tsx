@@ -9,6 +9,7 @@ import { ActionForm, type ActionResult } from "./action-form";
 import { Modal } from "./modal";
 import { Field } from "./ui";
 import { OwnerSelect } from "./owner-select";
+import { TrnDateField } from "./trn-date-field";
 
 /** «Προσφορά» isn't a scheduled SOACTION: it opens the offer form, and the source closes once the offer is saved */
 type Choice = NextActionKind | "OFFER";
@@ -156,7 +157,10 @@ export function NextActionButton({
                 <textarea name="comments" className="input min-h-24" defaultValue={title} />
               </Field>
 
-              <OwnerSelect />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TrnDateField />
+                <OwnerSelect />
+              </div>
 
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setOpen(false)} className="btn-ghost">

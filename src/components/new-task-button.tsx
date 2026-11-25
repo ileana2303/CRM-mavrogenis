@@ -8,6 +8,7 @@ import { Modal } from "./modal";
 import { Field } from "./ui";
 import { Select, type SelectOption } from "./select";
 import { OwnerSelect } from "./owner-select";
+import { TrnDateField } from "./trn-date-field";
 
 /** «+ Νέα εκκρεμότητα» at the top right of the pending page: title, due date, optional project in a modal → SOTASK. */
 export function NewTaskButton({
@@ -36,7 +37,10 @@ export function NewTaskButton({
           <Field label={el.pending.newDue} required>
             <input name="dueDate" type="date" className="input" required defaultValue={athensDate()} />
           </Field>
-          <OwnerSelect />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <TrnDateField />
+            <OwnerSelect />
+          </div>
           {projects.length > 0 && (
             <Field label={el.pending.project}>
               <Select name="projectId" defaultValue="" options={[{ value: "", label: el.pending.noProject }, ...projects]} />
