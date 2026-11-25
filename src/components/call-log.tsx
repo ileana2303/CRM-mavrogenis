@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DateInput } from "./date-input";
 import { createPortal } from "react-dom";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
@@ -144,7 +145,7 @@ function CallTime({ defaultAt }: { defaultAt: number }) {
     <div className="grid grid-cols-2 gap-3">
       <input type="hidden" name="at" value={`${date} ${time}`} />
       <Field label={el.pending.nextDate} required>
-        <input type="date" className="input" required value={date} onChange={(e) => setDate(e.target.value)} />
+        <DateInput required value={date} onChange={setDate} ariaLabel={el.pending.nextDate} />
       </Field>
       <Field label={el.callLog.when} required>
         <input type="time" className="input" required value={time} onChange={(e) => setTime(e.target.value)} />

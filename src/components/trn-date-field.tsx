@@ -1,6 +1,7 @@
 "use client";
 
 import { el } from "@/lib/i18n/el";
+import { DateInput } from "./date-input";
 import { athensDate } from "@/lib/athens";
 import { Field } from "./ui";
 
@@ -8,7 +9,7 @@ import { Field } from "./ui";
 export function TrnDateField({ name = "trnDate" }: { name?: string }) {
   return (
     <Field label={el.pending.trnDate} required>
-      <input name={name} type="date" className="input" required defaultValue={athensDate()} />
+      <DateInput name={name} required defaultValue={athensDate()} ariaLabel={el.pending.trnDate} />
     </Field>
   );
 }

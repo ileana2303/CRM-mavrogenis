@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { DateInput } from "@/components/date-input";
 import { BackLink, Field, PageTitle, Radios, entries } from "@/components/ui";
 import { DictationTextarea } from "@/components/dictation-textarea";
 import { el } from "@/lib/i18n/el";
@@ -47,7 +48,7 @@ export default async function FollowUpPage({ params }: { params: Promise<{ id: s
           <Radios name="nextAction" options={entries(el.enums.nextAction)} defaultValue="FOLLOWUP" />
         </Field>
         <Field label={el.followUp.nextDate} hint={el.followUp.pickDate}>
-          <input type="date" name="nextActionDate" className="input max-w-xs" />
+          <DateInput name="nextActionDate" className="max-w-xs" />
         </Field>
       </div>
       <div className="flex justify-end">

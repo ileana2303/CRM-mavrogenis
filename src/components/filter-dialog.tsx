@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { DateInput } from "./date-input";
 import { Icon } from "./icons";
 import { el } from "@/lib/i18n/el";
 
@@ -111,11 +112,11 @@ export function DateRangeFields({ from, to, fromName = "from", toName = "to" }: 
       <div className="grid grid-cols-2 gap-3">
         <label className="block min-w-0">
           <span className="label">{el.daily.from}</span>
-          <input type="date" name={fromName} value={f} max={t || undefined} onChange={(e) => setF(e.target.value)} className="input" required />
+          <DateInput name={fromName} value={f} max={t || undefined} onChange={setF} required ariaLabel={el.daily.from} />
         </label>
         <label className="block min-w-0">
           <span className="label">{el.daily.to}</span>
-          <input type="date" name={toName} value={t} min={f || undefined} onChange={(e) => setT(e.target.value)} className="input" required />
+          <DateInput name={toName} value={t} min={f || undefined} onChange={setT} required ariaLabel={el.daily.to} />
         </label>
       </div>
     </div>

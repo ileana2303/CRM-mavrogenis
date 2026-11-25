@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { DateInput } from "@/components/date-input";
 import { BackLink, Card, DoctorLine, Empty, Field, PageTitle, optionsFrom } from "@/components/ui";
 import { DictationTextarea } from "@/components/dictation-textarea";
 import { el } from "@/lib/i18n/el";
@@ -40,7 +41,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             <Select name="outcome" defaultValue="NONE" options={optionsFrom(el.enums.visitOutcome)} />
           </Field>
           <Field label={el.visit.nextDate} hint="ΗΗ / ΜΜ / ΕΕΕΕ">
-            <input type="date" name="nextActionDate" className="input" />
+            <DateInput name="nextActionDate" />
           </Field>
         </div>
         {active.length > 0 && (

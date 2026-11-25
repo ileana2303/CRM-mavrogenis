@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DateInput } from "./date-input";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
 import type { NextActionKind } from "@/server/domain/types";
@@ -50,7 +51,7 @@ export function NextActionFields({ commentsLabel }: { commentsLabel: string }) {
         <>
           <div className="grid grid-cols-2 gap-3">
             <Field label={el.pending.nextDate} required>
-              <input name="nextDate" type="date" className="input" required defaultValue={athensDate()} />
+              <DateInput name="nextDate" required defaultValue={athensDate()} ariaLabel={el.pending.nextDate} />
             </Field>
             <Field label={el.pending.nextTime} required>
               <input name="nextTime" type="time" className="input" required defaultValue={nextHour()} />

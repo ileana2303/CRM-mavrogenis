@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DateInput } from "@/components/date-input";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { el } from "@/lib/i18n/el";
 import { Select } from "@/components/select";
@@ -72,11 +73,11 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
       <form method="get" className="card p-4 grid grid-cols-2 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
         <label className="block">
           <span className="label">{el.daily.from}</span>
-          <input type="date" name="from" defaultValue={range.from} className="input" />
+          <DateInput name="from" defaultValue={range.from} ariaLabel={el.daily.from} />
         </label>
         <label className="block">
           <span className="label">{el.daily.to}</span>
-          <input type="date" name="to" defaultValue={range.to} className="input" />
+          <DateInput name="to" defaultValue={range.to} ariaLabel={el.daily.to} />
         </label>
         <label className="block col-span-2 md:col-span-1">
           <span className="label">{el.managerArea.salesperson}</span>
