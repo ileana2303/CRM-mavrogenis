@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DateInput } from "./date-input";
 import { el } from "@/lib/i18n/el";
 import { athensDate } from "@/lib/athens";
 import { ActionForm, type ActionResult } from "./action-form";
@@ -31,16 +32,15 @@ export function NewTaskButton({
       <Modal open={open} onClose={() => setOpen(false)} title={el.pending.addTitle}>
         <ActionForm action={action} className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-2 text-left">
           <input type="hidden" name="doctorId" value={doctorId} />
+          {/* first in the form (his request) */}
+          <TrnDateField />
           <Field label={el.pending.newTitle} required>
             <input name="title" className="input" required autoFocus placeholder="Αποστολή προσφοράς OCT" />
           </Field>
           <Field label={el.pending.newDue} required>
-            <input name="dueDate" type="date" className="input" required defaultValue={athensDate()} />
+            <DateInput name="dueDate" required defaultValue={athensDate()} ariaLabel={el.pending.newDue} />
           </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <TrnDateField />
-            <OwnerSelect />
-          </div>
+          <OwnerSelect />
           {projects.length > 0 && (
             <Field label={el.pending.project}>
               <Select name="projectId" defaultValue="" options={[{ value: "", label: el.pending.noProject }, ...projects]} />
