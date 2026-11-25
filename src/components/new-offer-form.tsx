@@ -9,6 +9,9 @@ import { Icon } from "./icons";
 import { fmtEur } from "@/lib/format";
 import { el } from "@/lib/i18n/el";
 
+/** leaveTo value for «go back» (the confirm dialog only needs to know that the user is leaving) */
+const BACK = "back";
+
 /**
  * «Νέα προσφορά»: header (Άκυρο / Αποθήκευση top right), line cards, comments, and a bottom bar with SoftOne's totals
  * (always in sight, whatever the number of lines). «Αποθήκευση» waits for SoftOne: disabled while a calculate is
@@ -46,7 +49,10 @@ export function NewOfferForm({
   const discount = calc ? calc.lines.reduce((s, l) => s + l.discountValue, 0) : 0;
 
   const onStatus = useCallback((s: OfferLinesStatus) => setStatus(s), []);
-  const leave = (href: string) => (dirty ? setLeaveTo(href) : router.push(href));
+  // «Πίσω» / «Άκυρο» = the browser's back (the page the form was opened from: pending list, project, offers …);
+  // only a form opened directly (new tab, no history) falls back to backHref
+  const goBack = () => (window.history.length > 1 ? router.back() : router.push(backHref));
+  const leave = () => (dirty ? setLeaveTo(BACK) : goBack());
 
   // browser reload / close / history back
   useEffect(() => {
@@ -94,14 +100,14 @@ export function NewOfferForm({
         {fromTask && <input type="hidden" name="fromKind" value={fromTask.kind} />}
 
         {/* header */}
-        <button type="button" onClick={() => leave(backHref)} className="btn-ghost -ml-3 self-start text-brand-700">
+        <button type="button" onClick={leave} className="btn-ghost -ml-3 self-start text-brand-700">
           {el.app.back}
         </button>
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-bold text-brand-800">{el.projects.newOffer}</h1>
             <div className="flex items-center gap-2 shrink-0">
-              <button type="button" onClick={() => leave(backHref)} className="btn-ghost">
+              <button type="button" onClick={leave} className="btn-ghost">
                 {el.app.cancel}
               </button>
               <button className="btn-primary min-w-40" disabled={busy || count === 0} title={busy ? el.projects.waitCalc : undefined}>
@@ -194,7 +200,7 @@ export function NewOfferForm({
           setLeaveTo(null);
           setStatus((s) => ({ ...s, dirty: false }));
           setComments("");
-          if (to) router.push(to);
+          if (to) goBack();
         }}
       />
     </>
