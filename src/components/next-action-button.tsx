@@ -94,6 +94,9 @@ export function NextActionButton({
           {projectId && <input type="hidden" name="projectId" value={projectId} />}
           <p className="text-sm text-[var(--muted)] line-clamp-2">{title}</p>
 
+          {/* first thing in the form (his request); not for «Προσφορά», which is a SALDOC with its own date */}
+          {kind !== "OFFER" && <TrnDateField />}
+
           <div>
             <span className="label">{el.pending.nextKind}</span>
             <div role="radiogroup" aria-label={el.pending.nextKind} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -157,10 +160,7 @@ export function NextActionButton({
                 <textarea name="comments" className="input min-h-24" defaultValue={title} />
               </Field>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TrnDateField />
-                <OwnerSelect />
-              </div>
+              <OwnerSelect />
 
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
