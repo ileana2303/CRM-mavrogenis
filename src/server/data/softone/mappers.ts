@@ -4,7 +4,7 @@
  */
 import { S1Error } from "./client";
 import type { ActivityType, CheckIn, Consent, DailyReport, DailyReportItem, Doctor, Task, NewNextAction, NewCallLog, NextActionKind, ActionKind, TimelineEntry, TimelineKind, TimelineSearchHit, TimelineSearchLineItem, TimelineSearchUnit, DoctorRank, Equipment, EquipmentCategory, MachineCatalog, Hospital, HospitalRef, Offer, ProjectSummary, NewS1Project, ProjectDetail, ProjectOffer, NewS1Offer, OfferCalc, OfferClosed, OfferLine, OfferStatus, Product } from "../../domain/types";
-import { athensToIso } from "../../../lib/athens";
+import { athensToIso, athensToday } from "../../../lib/athens";
 
 export interface S1CustomerRow {
   trdr: string | number;
@@ -477,6 +477,9 @@ export function offerToSetData(o: Omit<Offer, "id">, series: number, mtrlByCode:
   return { SALDOC: [header], ITELINES: lines };
 }
 
+/** TRNDATE (ημ/νία καταχώρησης) of every SOACTION the CRM creates: today, Greek date "yyyy-mm-dd" (his request, 2026-11-25) */
+const trnDate = () => athensToday();
+
 /** Date + time as SoftOne expects it in FROMDATE / FINALDATE: "yyyy-mm-dd hh:mm", Greek local time. */
 export function s1DateTime(iso: string | Date): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
@@ -498,7 +501,7 @@ export function s1DateTimeToIso(v?: string | null): string | undefined {
  * TRDR, ACTPRSN = PRSN of the logged-in user, FROMDATE = arrival. Αναχώρηση = header delta FINALDATE.
  */
 export function arrivalToSetData(trdr: string, prsn: string, arrivedAtIso: string, series: number): Record<string, Array<Record<string, unknown>>> {
-  return { SOACTION: [{ SERIES: series, TRDR: Number(trdr), ACTPRSN: Number(prsn), FROMDATE: s1DateTime(arrivedAtIso) }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(trdr), ACTPRSN: Number(prsn), FROMDATE: s1DateTime(arrivedAtIso) }] };
 }
 /**
  * Αναχώρηση + visit report (2026-11-19, his choices): FINALDATE, ACTSTATUS 3 (the visit happened – before, every visit
@@ -549,7 +552,7 @@ function prjcField(projectId?: string): { PRJC?: number } {
   return { PRJC: Number(projectId) };
 }
 export function taskToSetData(t: Omit<Task, "id">, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
-  return { SOACTION: [{ SERIES: series, TRDR: Number(t.doctorId), ...prjcField(t.projectId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(t.doctorId), ...prjcField(t.projectId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
 }
 export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<Record<string, unknown>>> {
   const h: Record<string, unknown> = {};
@@ -569,7 +572,7 @@ export const NEXT_ACTION_OBJECT: Record<NextActionKind, "SOCALL" | "SOEMAIL" | "
 export function nextActionToSetData(a: NewNextAction, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
   if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
-  return { SOACTION: [{ SERIES: series, TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
 }
 
 /**
@@ -579,7 +582,7 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
  */
 export function callLogToSetData(c: NewCallLog, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(c.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${c.at}`);
-  return { SOACTION: [{ SERIES: series, TRDR: Number(c.doctorId), ACTPRSN: Number(prsn), FROMDATE: c.at, COMMENTS: c.comments, ACTSTATUS: TASK_STATUS_DONE }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(c.doctorId), ACTPRSN: Number(prsn), FROMDATE: c.at, COMMENTS: c.comments, ACTSTATUS: TASK_STATUS_DONE }] };
 }
 
 /**
