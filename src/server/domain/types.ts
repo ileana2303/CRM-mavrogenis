@@ -368,6 +368,8 @@ export interface Task {
   ownerName?: string;
   /** on create: ACTPRSN to assign it to; absent = the logged-in salesperson */
   ownerId?: string;
+  /** on create: TRNDATE (ημ/νία καταχώρησης) "yyyy-mm-dd"; absent = today */
+  trnDate?: string;
   /** customer name/code from the row – the cross-customer «Η μέρα μου» list shows them */
   doctorName?: string;
   doctorCode?: string;
@@ -472,6 +474,8 @@ export interface NewCallLog {
   /** when the call was placed – Athens wall-clock "yyyy-mm-dd hh:mm" */
   at: string;
   comments: string;
+  /** TRNDATE (ημ/νία καταχώρησης) "yyyy-mm-dd"; absent = today */
+  trnDate?: string;
 }
 
 /** «Επόμενη ενέργεια» after an Εκκρεμότητα: SOCALL / SOEMAIL / SOMEETING (series per kind, his mapping 2026-11-19). */
@@ -488,6 +492,8 @@ export interface NewNextAction {
   projectId?: string;
   /** ACTPRSN – who the new action is for; absent = the logged-in salesperson */
   ownerId?: string;
+  /** on create: TRNDATE (ημ/νία καταχώρησης) "yyyy-mm-dd"; absent = today */
+  trnDate?: string;
   /** Athens wall-clock "yyyy-mm-dd hh:mm" */
   at: string;
   comments: string;

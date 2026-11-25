@@ -478,7 +478,7 @@ export function offerToSetData(o: Omit<Offer, "id">, series: number, mtrlByCode:
 }
 
 /** TRNDATE (ημ/νία καταχώρησης) of every SOACTION the CRM creates: today, Greek date "yyyy-mm-dd" (his request, 2026-11-25) */
-const trnDate = () => athensToday();
+const trnDate = (given?: string) => (given && /^\d{4}-\d{2}-\d{2}$/.test(given) ? given : athensToday());
 
 /** Date + time as SoftOne expects it in FROMDATE / FINALDATE: "yyyy-mm-dd hh:mm", Greek local time. */
 export function s1DateTime(iso: string | Date): string {
@@ -552,7 +552,7 @@ function prjcField(projectId?: string): { PRJC?: number } {
   return { PRJC: Number(projectId) };
 }
 export function taskToSetData(t: Omit<Task, "id">, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
-  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(t.doctorId), ...prjcField(t.projectId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(t.trnDate), TRDR: Number(t.doctorId), ...prjcField(t.projectId), ACTPRSN: Number(prsn), COMMENTS: t.title, DUEDATE: t.dueDate, ACTSTATUS: t.status === "DONE" ? TASK_STATUS_DONE : TASK_STATUS_OPEN }] };
 }
 export function taskPatchToSetData(patch: Partial<Task>): Record<string, Array<Record<string, unknown>>> {
   const h: Record<string, unknown> = {};
@@ -572,7 +572,7 @@ export const NEXT_ACTION_OBJECT: Record<NextActionKind, "SOCALL" | "SOEMAIL" | "
 export function nextActionToSetData(a: NewNextAction, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${a.at}`);
   if (!/^\d+$/.test(a.fromTaskId)) throw new Error(`Μη έγκυρη εκκρεμότητα: ${a.fromTaskId}`);
-  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(a.trnDate), TRDR: Number(a.doctorId), ...prjcField(a.projectId), ACTPRSN: Number(prsn), FROMDATE: a.at, COMMENTS: a.comments, SOACTIONS: Number(a.fromTaskId) }] };
 }
 
 /**
@@ -582,7 +582,7 @@ export function nextActionToSetData(a: NewNextAction, prsn: string, series: numb
  */
 export function callLogToSetData(c: NewCallLog, prsn: string, series: number): Record<string, Array<Record<string, unknown>>> {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(c.at)) throw new Error(`Μη έγκυρη ημερομηνία/ώρα: ${c.at}`);
-  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(), TRDR: Number(c.doctorId), ACTPRSN: Number(prsn), FROMDATE: c.at, COMMENTS: c.comments, ACTSTATUS: TASK_STATUS_DONE }] };
+  return { SOACTION: [{ SERIES: series, TRNDATE: trnDate(c.trnDate), TRDR: Number(c.doctorId), ACTPRSN: Number(prsn), FROMDATE: c.at, COMMENTS: c.comments, ACTSTATUS: TASK_STATUS_DONE }] };
 }
 
 /**
