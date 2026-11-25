@@ -184,8 +184,9 @@ prjc_prjc_name?, actStatus, comments?, dueDate? (tasks), fromDate, actPrsn?, act
 - Re-checked 2026-11-19 after the fix: prsn 59 → 9190, 9189 (both due today); trdr 34583 → 6 rows incl. 9194 SOCALL of prsn 38.
 
 **TRNDATE (2026-11-25, his request):** every SOACTION the CRM creates – SOTASK, SOCALL (next action / follow-up / logged call),
-SOEMAIL, SOMEETING (next action, Άφιξη) – sends `"TRNDATE": "yyyy-mm-dd"` = today in Athens (ημ/νία καταχώρησης), right
-after SERIES. Not yet checked against SoftOne.
+SOEMAIL, SOMEETING (next action, Άφιξη) – sends `"TRNDATE": "yyyy-mm-dd"` right after SERIES. The forms show it as
+«Ημ/νία καταχώρησης» (today by default, editable): new task, next action, logged call and the follow-ups in the call log /
+visit report. Άφιξη has no form → always today. Not yet checked against SoftOne.
 
 ACTSTATUS: 0 Αδιάφορο · 1 Προς έναρξη · 2 Σε εξέλιξη · 3 Ολοκληρώθηκε · 4 Ακυρώθηκε · 5 Σε αναμονή · 6 Σε αναβολή.
 CRM shows 0/1/2/5/6 as open, 3 as done, hides 4.
