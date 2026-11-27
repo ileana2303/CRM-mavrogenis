@@ -275,6 +275,26 @@ input.input[type="time"]::-webkit-calendar-picker-indicator {
   }
 }
 
+/* ---- dictation recording (src/components/dictation-textarea.tsx) ---- */
+@keyframes dictation-rec-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.dictation-recording__dot {
+  @apply size-2 shrink-0 rounded-full bg-white;
+  animation: dictation-rec-pulse 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dictation-recording__dot {
+    animation: none;
+  }
+}
+
 /* ---- loading skeletons (src/components/skeleton.tsx) ---- */
 @keyframes skeleton-shimmer {
   100% {

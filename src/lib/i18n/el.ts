@@ -240,6 +240,7 @@ export const el = {
     commentPlaceholder: "Πχ. Ενδιαφέρεται για OCT αλλά όχι αυτή την στιγμή",
     dictate: "Φωνητική υπαγόρευση",
     dictating: "Ακούω… πατήστε για διακοπή",
+    dictateStop: "Διακοπή εγγραφής",
     dictateTranscribing: "Μεταγραφή…",
     dictateTranscribeError: "Η μεταγραφή απέτυχε. Δοκιμάστε ξανά ή πληκτρολογήστε το κείμενο.",
     dictateUnsupported:

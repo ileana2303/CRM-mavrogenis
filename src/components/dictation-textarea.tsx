@@ -240,7 +240,7 @@ export function DictationTextarea({
 
   const disabled = insecure || provider === null || transcribing || !supported;
 
-  const buttonLabel = transcribing ? el.visit.dictateTranscribing : listening ? el.visit.dictating : el.visit.dictate;
+  const buttonLabel = transcribing ? el.visit.dictateTranscribing : listening ? el.visit.dictateStop : el.visit.dictate;
 
   return (
     <div className="flex flex-col gap-2">
@@ -252,8 +252,22 @@ export function DictationTextarea({
           disabled={disabled}
           className={listening ? "btn-danger" : "btn-secondary"}
           aria-pressed={listening || transcribing}
+          aria-live={listening ? "polite" : undefined}
         >
-          <span aria-hidden>{listening ? "⏹" : transcribing ? "…" : "🎤"}</span>
+          <span aria-hidden className="inline-flex items-center gap-1.5">
+            {listening ? (
+              <>
+                <span className="dictation-recording__dot" />
+                <span className="grid size-5 place-items-center rounded-sm bg-white/25">
+                  <span className="block size-2.5 rounded-[2px] bg-white" />
+                </span>
+              </>
+            ) : transcribing ? (
+              "…"
+            ) : (
+              "🎤"
+            )}
+          </span>
           {buttonLabel}
         </button>
         {error ? (
